@@ -1,46 +1,20 @@
-import { useState, useMemo, useEffect } from "react";
-import {
-  HomeBanner,
-  BannerFormData,
-  AppTab,
-  CtaRedirectType,
-} from "@/hooks/useHomeBanners";
-
+import { useState,  useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-
 
 import {
+  ImageOffIcon,
   Plus,
   Trash2,
-  Image,
 } from "lucide-react";
-import {
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
+
+
 import axios from "axios";
 import { toast } from "sonner";
 import { getAllBannersAPI, deleteBannerAPI,addBannerAPI } from "../api/banner";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
-import { Table } from "antd";
+import { Image, message, Modal, Select, Table } from "antd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-
 
 export default function HomeBanners() {
   // const { banners, isLoading, createBanner, updateBanner, deleteBanner, reorderBanners } = useHomeBanners();
@@ -55,12 +29,7 @@ export default function HomeBanners() {
     return config;
   });
   const [form, setForm] = useState({
-    title: "",
-    logoImage: "",
-    bannerImage: "",
-    movies: "",
-    webseries: "",
-    categoryId: "",
+    
   });
   const [previewLogo, setPreviewLogo] = useState(null);
   const [previewBannerLogo, setPreviewBannerLogo] = useState(null);
@@ -80,6 +49,8 @@ export default function HomeBanners() {
     if (name === "logoImage") makePreview(setPreviewLogo);
     if (name === "bannerImage") makePreview(setPreviewBannerLogo);
   };
+
+
 
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value });
@@ -101,7 +72,7 @@ export default function HomeBanners() {
             />
           ) : (
             <div className="flex h-12 w-20 items-center justify-center rounded bg-muted">
-              <Image className="h-5 w-5 text-muted-foreground" />
+              <ImageOffIcon className="h-5 w-5 text-muted-foreground" />
             </div>
           ),
       },
@@ -169,28 +140,58 @@ export default function HomeBanners() {
           value: item?._id,
         })) || [];
       setAllMovies(Response);
-      console.log(res, "get the reee");
     } catch (error) {
       console.log(error);
     }
   };
 
-const addBannerAPIData  = async ()=>{
-  try{
-    const res = await addBannerAPI(form)
-    console.log(res,'add the banner data here ')
+const addBannerAPIData = async () => {
+  try {
+    const formData = new FormData();
+
+    Object.keys(form).forEach((key) => {
+      const value = form[key];
+
+      if (!value) return;
+
+      // Handle file fields
+      if (["logoImage", "bannerImage"].includes(key)) {
+        if (value instanceof File) {
+          formData.append(key, value);
+        }
+      } 
+      // Handle arrays if any
+      else if (Array.isArray(value)) {
+        if (value.length > 0) {
+          formData.append(key, JSON.stringify(value));
+        }
+      } 
+      // Handle normal fields
+      else {
+        formData.append(key, value);
+      }
+    });
+
+    const res = await addBannerAPI(formData);
+    if(res?.status===201){
+      fetchBanners()
+      setDialogOpen(false)
+      setForm({})
+      setPreviewBannerLogo(null)
+      setPreviewLogo(null)
+    }
+
+    console.log(res);
+  } catch (error) {
+    console.log(error);
   }
-  catch(error){
-    console.log(error)
-  }
-}
+};
 
 
   const [categories, setCategories] = useState([]);
   const fetchCategories = async () => {
     try {
       const res = await getCategoriesAPI();
-      console.log(res, "reee");
       const Response = res?.data?.data?.map((item) => ({
         label: item?.name,
         value: item?._id,
@@ -217,7 +218,7 @@ const addBannerAPIData  = async ()=>{
       if (res?.status === 200) {
         setOpen(false);
         fetchBanners();
-        toast.success("Banner Delete Successfully");
+        message.success("Banner Delete Successfully");
       }
     } catch (error) {
       setDeleteLoading(false);
@@ -234,11 +235,11 @@ const addBannerAPIData  = async ()=>{
       const response = await getAllBannersAPI();
       if (response?.status === 200) {
         const Data = response?.data?.data || [];
+        
         setBanners(Data);
         setIsLoading(false);
       }
       // setMovies(response.data.data || []);
-      console.log(response, "ressss");
     } catch {
       toast.error("Failed to fetch movies");
       setIsLoading(false);
@@ -251,79 +252,19 @@ const addBannerAPIData  = async ()=>{
   }, []);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<HomeBanner | null>(null);
-  const [formData, setFormData] = useState<BannerFormData>({
-    title: "",
-    subtitle: "",
-    background_image_url: "",
-    mobile_image_url: "",
-    logo_image_url: "",
-    cta_text: "Watch Now",
-    cta_redirect_type: "movie",
-    content_id: "",
-    is_active: true,
-    display_order: 0,
-    auto_slide_duration: 5,
-    allow_swipe: true,
-    visible_tabs: ["home"],
-  });
+  const [editingBanner, setEditingBanner] = useState(null);
+ 
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = banners.findIndex((b) => b.id === active.id);
-      const newIndex = banners.findIndex((b) => b.id === over.id);
-      const newOrder = arrayMove(banners, oldIndex, newIndex);
-      reorderBanners.mutate(newOrder.map((b) => b.id));
-    }
-  };
+
 
   const openCreateDialog = () => {
     setEditingBanner(null);
-    setFormData({
-      title: "",
-      subtitle: "",
-      background_image_url: "",
-      mobile_image_url: "",
-      logo_image_url: "",
-      cta_text: "Watch Now",
-      cta_redirect_type: "movie",
-      content_id: "",
-      is_active: true,
-      display_order: banners.length,
-      auto_slide_duration: 5,
-      allow_swipe: true,
-      visible_tabs: ["home"],
-    });
+ 
     setDialogOpen(true);
   };
 
-  const openEditDialog = (banner: HomeBanner) => {
-    setEditingBanner(banner);
-    setFormData({
-      title: banner.title || "",
-      subtitle: banner.subtitle || "",
-      background_image_url: banner.background_image_url,
-      mobile_image_url: banner.mobile_image_url || "",
-      logo_image_url: banner.logo_image_url || "",
-      cta_text: banner.cta_text || "Watch Now",
-      cta_redirect_type: banner.cta_redirect_type,
-      content_id: banner.content_id || "",
-      is_active: banner.is_active,
-      display_order: banner.display_order,
-      auto_slide_duration: banner.auto_slide_duration || 5,
-      allow_swipe: banner.allow_swipe ?? true,
-      visible_tabs: banner.visible_tabs,
-    });
-    setDialogOpen(true);
-  };
+
 
   return (
     <>
@@ -344,7 +285,7 @@ const addBannerAPIData  = async ()=>{
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Active Banners ({banners.filter((b) => b.is_active).length})
+              Active Banners ({banners.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -355,48 +296,22 @@ const addBannerAPIData  = async ()=>{
                 No banners yet. Create your first banner!
               </p>
             ) : (
-              // <DndContext
-              //   sensors={sensors}
-              //   collisionDetection={closestCenter}
-              //   onDragEnd={handleDragEnd}
-              // >
-              //   <Table>
-              //     <TableHeader>
-              //       <TableRow>
-              //         <TableHead className="w-24">Mobile Image</TableHead>
-              //         <TableHead>Title</TableHead>
-              //         <TableHead>Description</TableHead>
-              //         <TableHead className="w-20">Actions</TableHead>
-              //       </TableRow>
-              //     </TableHeader>
-              //     <TableBody>
-              //       <SortableContext
-              //         items={banners.map((b) => b.id)}
-              //         strategy={verticalListSortingStrategy}
-              //       >
-              //         {banners?.map((banner) => (
-              //           <SortableBannerRow
-              //             key={banner.id}
-              //             banner={banner}
-              //             onEdit={openEditDialog}
-              //           />
-              //         ))}
-              //       </SortableContext>
-              //     </TableBody>
-              //   </Table>
-              // </DndContext>
+                
               <BannerTable />
             )}
           </CardContent>
         </Card>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingBanner ? "Edit Banner" : "Create New Banner"}
-              </DialogTitle>
-            </DialogHeader>
+      
+      </div>
+      <CommonDeleteModal
+        open={open}
+        onCancel={() => setOpen(false)}
+        onConfirm={deleteBanner}
+        loading={deleteLoading}
+      />
+        <Modal maskClosable={false} title={(<><div className="text-xl font-bold">Add Banner</div></>)} footer={false} open={dialogOpen} width={800}  onCancel={()=>setDialogOpen(false)} >
+           
 
             <div className="   rounded-2xl ">
               {/* BASIC INFO */}
@@ -409,7 +324,7 @@ const addBannerAPIData  = async ()=>{
                     <input
                       placeholder="Title"
                       className="border p-2 rounded"
-                      value={form.title}
+                      value={form?.title}
                       onChange={(e) => handleChange("title", e.target.value)}
                     />
                   </div>
@@ -417,73 +332,69 @@ const addBannerAPIData  = async ()=>{
                     <div className="block text-sm font-medium text-gray-700 mb-1">
                       Movies
                     </div>
-                    {/* <Select
+                    <Select
+                    showSearch={true}
+                    
+                    placeholder="Select Movies"
                       className="border p-2 rounded w-full"
-                      value={form.movies}
-                      onChange={(e) => console.log(e,'get event here ')}
-                    >
+                      value={form?.movies}
+                      // onChange={(e) =>handleChange("movies",e?.target?.value)}
+                      onChange={(e) =>setForm({...form,"movies":e})}
+                      options={allMovies}
+                        filterOption={(input, option) =>
+    option?.label?.toLowerCase().includes(input.toLowerCase())
+  }
+                   />
+{/* 
                       {allMovies?.map((item) => (
-                        <Option key={item._id} value={item._id}>
-                          {item.name}
-                        </Option>
+                        <option
+                          key={item.value || item._id}
+                          value={item.value || item._id}
+                        >
+                          {item.label || item.name}
+                        </option>
                       ))}
                     </Select> */}
-                    <select
-                      className="border p-2 rounded w-full"
-                      value={form.movies}
-                      // onChange={(e) =>handleChange("movies",e?.target?.value)}
-                      onChange={(e) =>{console.log(e,'valjueee')}}
-                    >
-
-                      {allMovies?.map((item) => (
-                        <option
-                          key={item.value || item._id}
-                          value={item.value || item._id}
-                        >
-                          {item.label || item.name}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
-                {console.log(form,'form her ')}
-                <div className="grid grid-cols-2 gap-0">
-                  <div className="w-[50%]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="grid grid-cols-2 gap-4">
+                  <div >
+                    <div className="block text-sm font-medium text-gray-700 mb-1">
                       Webseries
-                    </label>
-                     <select
-                      className="border p-2 rounded w-full"
-                      value={form.webseries||""}
-                      onChange={(e) =>handleChange("webseries",e?.target?.value)}
-                    >
-                      {allMovies?.map((item) => (
-                        <option
-                          key={item.value || item._id}
-                          value={item.value || item._id}
-                        >
-                          {item.label || item.name}
-                        </option>
-                      ))}
-                    </select>
+                    </div>
+                     <Select
+                     placeholder="Select Webseries"
+                      className="border p-2 rounded !w-full"
+                      value={form?.webseries}
+                      onChange={(e) =>setForm({...form,"webseries":e})}
+                      options={allMovies}
+                      showSearch
+                       filterOption={(input, option) =>
+    option?.label?.toLowerCase().includes(input.toLowerCase())
+  }
+                   
+                    />
+                      
                   </div>
-                  <div className="w-[50%]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div>
+                    <div className="block text-sm font-medium text-gray-700 mb-1">
                       Categories
-                    </label>
-                    <select
-                      className="border p-2 rounded w-[300px]"
-                      value={form.categoryId}
+                    </div>
+                    <Select
+                    placeholder="Select Category"
+                      className="border p-2 rounded !w-full"
+                      value={form?.categoryId}
                       onChange={(e) =>
-                        handleChange("categoryId", e?.target?.value)
+                        setForm({...form,"categoryId":e})
                       }
-                    >
-                      {categories?.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
+                      options={categories}
+                      showSearch
+                       filterOption={(input, option) =>
+    option?.label?.toLowerCase().includes(input.toLowerCase())
+  }
+                   
+                    />
+                     
                   </div>
                 </div>
                 <div className="grid grid-cols-2   gap-3">
@@ -499,13 +410,14 @@ const addBannerAPIData  = async ()=>{
                         id="bannerImage"
                         className="h-[10vh]"
                       />
-                      <label htmlFor="logo" className="image-upload-label">
+                      <label htmlFor="bannerImage" className="image-upload-label">
                         {previewBannerLogo || form?.bannerImage ? (
-                          <img
-                            src={previewBannerLogo || form?.bannerImage}
-                            alt="Banner Preview"
-                            className="logo-preview"
-                          />
+                          // <img
+                          //   src={previewBannerLogo || form?.bannerImage}
+                          //   alt="Banner Preview"
+                          //   className="h-20 w=20 object-cover"
+                          // />
+                          <img className="h-[300px] w-[200px]" src={previewBannerLogo || form?.bannerImage} alt="Banner preview" />
                         ) : (
                           <div className="image-placeholder">
                             <span>🏷️</span>
@@ -528,12 +440,12 @@ const addBannerAPIData  = async ()=>{
                         accept="image/*"
                         id="logoImage"
                       />
-                      <label htmlFor="logo" className="image-upload-label">
+                      <label htmlFor="logoImage" className="image-upload-label">
                         {previewLogo || form?.logoImage ? (
                           <img
                             src={previewLogo || form?.logoImage}
                             alt="Logo Preview"
-                            className="logo-preview"
+                          className="h-[300px] w-[200px]"
                           />
                         ) : (
                           <div className="image-placeholder">
@@ -550,19 +462,17 @@ const addBannerAPIData  = async ()=>{
 
               {/* ACTIONS */}
               <div className="flex justify-end gap-2 mt-6">
-                <button className="border px-4 py-2 rounded">Cancel</button>
+                 <button
+                onClick={()=>{
+                  setForm({})
+                  setDialogOpen(false)
+                }}
+                className="border px-4 py-2 rounded">Cancel</button>
                 <Button onClick={()=>addBannerAPIData()}>Submit</Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-      <CommonDeleteModal
-        open={open}
-        onCancel={() => setOpen(false)}
-        onConfirm={deleteBanner}
-        loading={deleteLoading}
-      />
+         
+        </Modal>
     </>
   );
 }
