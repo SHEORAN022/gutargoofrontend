@@ -1,0 +1,28 @@
+project_id = "qjomlibklepwwhlohdwy"
+
+[functions.movies]
+verify_jwt = false
+
+[functions.short-movies]
+verify_jwt = false
+
+[functions.tv-shows]
+verify_jwt = false
+
+[functions.web-series]
+verify_jwt = false
+
+[functions.vendors]
+verify_jwt = false
+
+[functions.home-layout]
+verify_jwt = false
+
+[functions.watch-progress]
+verify_jwt = false
+
+[functions.search]
+verify_jwt = false
+
+[functions.recommendations]
+verify_jwt = false
