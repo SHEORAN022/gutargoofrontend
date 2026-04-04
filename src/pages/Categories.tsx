@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getCategoryListingAPI,addCategoryAPI } from "../api/category.js";
-import { message, Modal, Table } from "antd";
+import { getCategoryListingAPI,addCategoryAPI ,editCategoryAPI,deleteCategoryAPI} from "../api/category.js";
+import { Input, message, Modal, Spin, Table } from "antd";
+import CommonDeleteModal from "../components/AntdComponents/Modal";
 
 interface Category {
   id: string;
@@ -116,27 +117,44 @@ export default function Categories() {
   };
     const [open, setOpen] = useState(false);
     const [form,setForm] = useState({})
-
+  const [deleteOpen,setDeleteOpen] = useState(false)
   const [categoryData, setCategoryData] = useState([]);
   const [loading,setLoading] = useState(false)
-  const addCategory  = async ()=>{
-    try{
-      if(form?.name===""){
-        message.error("Category Name is required ")
-        return 
+  const [deleteLoading,setDeleteLoading] = useState(false)
+  const [deleteId,setDeleteId] = useState("")
+    const deleteCategory = async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await deleteCategoryAPI(deleteId);
+      if (res?.status === 200) {
+        setDeleteOpen(false);
+        getCategoryData();
+        message.success("Category Delete Successfully");
       }
-      const res = await addCategoryAPI(form)
-      if(res?.status===201){
-        setOpen(false)
-        setForm({})
-      }
-      
+    } catch (error) {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
+
+      console.log(error);
+    } finally {
+      setDeleteLoading(false);
+      setDeleteOpen(false)
     }
-    catch(error){
-      console.log(error)
-      message.error(error?.data?.message || "Something went wrong")
-    }
-  }
+  };
+  const [editData,setEditData] = useState(false)
+
+const onEdit = (data) =>{
+  // setEditData(!editData)
+  // setDialogOpen(true)
+  // const Response = data?.data
+  setEditData(true)
+  setOpen(true)
+  setDeleteId(data?._id)
+  setForm({
+    name:data?.name,
+  })
+
+}
   const BannerTable = () => {
     const columns = [
       {
@@ -152,11 +170,14 @@ export default function Categories() {
         width: 100,
         render: (_, banner) => (
           <div className="flex gap-1">
+             <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
             <Button
-              // onClick={() => {
-              //   setDeleteId(banner?._id);
-              //   setOpen(true);
-              // }}
+              onClick={() => {
+                setDeleteId(banner?._id);
+                setDeleteOpen(true);
+              }}
               variant="ghost"
               size="icon"
               className="text-destructive"
@@ -172,6 +193,8 @@ export default function Categories() {
       <Table columns={columns} dataSource={categoryData} pagination={false} />
     );
   };
+
+
 
   const getCategoryData = async () => {
     try {
@@ -193,8 +216,34 @@ export default function Categories() {
   useEffect(() => {
     getCategoryData();
   }, []);
+const [categoryAddLoading,setCategoryAddLoading] = useState(false)
+const addCategory  = async ()=>{
+    try{
+      setCategoryAddLoading(true)
+      if(form?.name===""){
+        message.error("Category Name is required ")
+        return 
+      }
+      const res = editData? await editCategoryAPI(deleteId,form) :  await addCategoryAPI(form)
+      if(res?.status===201 || res?.status ===200){
+        if(editData){
+          setEditData(false)
+        }
+        setOpen(false)
+        setForm({})
+        getCategoryData()
+      }
+      
+    }
+    catch(error){
+      console.log(error)
+      message.error(error?.data?.message || "Something went wrong")
+    }
+    finally{
+            setCategoryAddLoading(false)
 
-
+    }
+  }
    if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -222,7 +271,7 @@ export default function Categories() {
       </div>
       <BannerTable />
     </div>
-            <Modal maskClosable={false} title={(<><div className="text-xl font-bold">Add Category</div></>)} footer={false} open={open} width={800}  onCancel={()=>setOpen(false)} >
+            <Modal maskClosable={false} title={(<><div className="text-xl font-bold">{editData?"Edit":"Add"} Category</div></>)} footer={false} open={open} width={800}  onCancel={()=>setOpen(false)} >
 
             <div className="   rounded-2xl ">
               <div className="flex flex-col gap-2">
@@ -231,7 +280,7 @@ export default function Categories() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Category Name <span className="text-red-500">*</span>
                     </label>
-                    <input
+                    <Input
                       placeholder="Title"
                       className="border p-2 rounded"
                       value={form?.name}
@@ -248,11 +297,16 @@ export default function Categories() {
                   setOpen(false)
                 }}
                 className="border px-4 py-2 rounded">Cancel</button>
-                <Button onClick={()=>addCategory()}>Submit</Button>
+                <Button onClick={()=>addCategory()}>{categoryAddLoading? (<Spin/>):(<>{editData?"Update":"Submit"}</>)}</Button>
               </div>
             </div>
     </Modal>
-
+ <CommonDeleteModal
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={deleteCategory}
+        loading={deleteLoading}
+      />
 
     </>
    

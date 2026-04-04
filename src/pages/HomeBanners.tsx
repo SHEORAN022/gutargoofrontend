@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { getAllBannersAPI, deleteBannerAPI,addBannerAPI } from "../api/banner";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
-import { Image, message, Modal, Select, Table } from "antd";
+import { Image, Input, message, Modal, Select, Table } from "antd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WebSeries from "./WebSeries";
 
@@ -177,7 +177,6 @@ export default function HomeBanners() {
 const onEdit = (data) =>{
   // setEditData(!editData)
   // setDialogOpen(true)
-  console.log(data,'data deeee')
   // const Response = data?.data
   setEditData(!editData)
   setDialogOpen(true)
@@ -355,6 +354,7 @@ const addBannerAPIData = async () => {
 
       
       </div>
+      {console.log(form,'ggasdf')}
       <CommonDeleteModal
         open={open}
         onCancel={() => setOpen(false)}
@@ -372,9 +372,9 @@ const addBannerAPIData = async () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Banner Title <span className="text-red-500">*</span>
                     </label>
-                    <input
+                    <Input
                       placeholder="Title"
-                      className="border p-2 rounded"
+                      className="border p-2 rounded h-[36px]"
                       value={form?.title}
                       onChange={(e) => handleChange("title", e.target.value)}
                     />
