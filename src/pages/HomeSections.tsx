@@ -8,7 +8,6 @@ import { useShortMoviesDB } from "@/hooks/useShortMoviesDB";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,8 +16,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {getSectionAPI,addSectionAPI} from "../api/section"
-import { Input, InputNumber, Modal, Select, Switch } from "antd";
-
+import { Input, InputNumber, message, Modal, Select, Switch, Table } from "antd";
+import {getCategoriesAPI} from "../api/movies"
 const SECTION_TYPES: { value: SectionType; label: string; icon: React.ElementType; description: string }[] = [
   { value: "continue_watching", label: "Continue Watching", icon: Clock, description: "User's in-progress content" },
   { value: "trending_now", label: "Trending Now", icon: TrendingUp, description: "Popular content based on views" },
@@ -153,7 +152,7 @@ interface SelectedContent {
 }
 
 export default function HomeSections() {
-  const { sections, isLoading, createSection, updateSection, deleteSection, reorderSections } = useHomeSections();
+  const { sections,createSection, updateSection, deleteSection, reorderSections } = useHomeSections();
   const { categories } = useCategories();
   const { movies } = useMoviesDB();
   const { webSeries } = useWebSeriesDB();
@@ -319,6 +318,168 @@ export default function HomeSections() {
     //New section module start from here 
   const {Option} = Select
   const [form, setForm] = useState( {});
+ const [isLoading,setIsLoading] = useState(false)
+    const [sectionData,setSectionData] = useState([])
+  const [sectionLoading,setSectionLoading] = useState(false)
+
+   const SectionTable = () => {
+   const columns = [
+  {
+    title: "Title",
+    key: "title",
+    align: "center",
+    render: (_, record) => (
+      <div style={{ fontWeight: 500 }}>
+        {record.title || "No Title"}
+      </div>
+    ),
+  },
+
+  {
+    title: "Section Type",
+    dataIndex: "sectionType",
+    key: "sectionType",
+    align: "center",
+    render: (data) => (
+      <span>{data?.replaceAll("_", " ")}</span>
+    ),
+  },
+
+  {
+    title: "Content Source",
+    dataIndex: "contentSource",
+    key: "contentSource",
+    align: "center",
+    render: (data) => (
+      <span>{data?.replaceAll("_", " ")}</span>
+    ),
+  },
+
+  {
+    title: "Category",
+    dataIndex: "categoryId",
+    key: "categoryId",
+    align: "center",
+    render: (data) => (
+      <div style={{ fontWeight: 500 }}>
+        {data?.name || "N/A"}
+      </div>
+    ),
+  },
+
+  {
+    title: "Display Style",
+    dataIndex: "displayStyle",
+    key: "displayStyle",
+    align: "center",
+    render: (data) => (
+      <span>{data?.replaceAll("_", " ")}</span>
+    ),
+  },
+
+  {
+    title: "Item Limit",
+    dataIndex: "itemLimit",
+    key: "itemLimit",
+    align: "center",
+  },
+
+  {
+    title: "Tabs",
+    dataIndex: "visibleTabs",
+    key: "visibleTabs",
+    align: "center",
+    render: (tabs) => (
+      <div>
+        {tabs?.length
+          ? tabs.map((tab) => tab.replaceAll("_", " ")).join(", ")
+          : "N/A"}
+      </div>
+    ),
+  },
+
+  {
+    title: "Order",
+    dataIndex: "displayOrder",
+    key: "displayOrder",
+    align: "center",
+  },
+
+  {
+    title: "Active",
+    dataIndex: "isActive",
+    key: "isActive",
+    align: "center",
+    render: (val) => (
+      <span style={{ color: val ? "green" : "red" }}>
+        {val ? "Active" : "Inactive"}
+      </span>
+    ),
+  },
+
+  {
+    title: "Original Only",
+    dataIndex: "isOriginalOnly",
+    key: "isOriginalOnly",
+    align: "center",
+    render: (val) => (val ? "Yes" : "No"),
+  },
+
+  {
+    title: "Trending Days",
+    dataIndex: "trendingPeriodDays",
+    key: "trendingPeriodDays",
+    align: "center",
+  },
+
+  {
+    title: "Sort",
+    key: "sortConfig",
+    align: "center",
+    render: (_, record) => (
+      <span>
+        {record?.sortConfig?.field} ({record?.sortConfig?.order})
+      </span>
+    ),
+  },
+
+  {
+    title: "Actions",
+    key: "actions",
+    width: 100,
+    render: (_, item) => (
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+
+        <Button
+          // onClick={() => {
+          //   setDeleteId(item?._id);
+          //   setOpen(true);
+          // }}
+          variant="ghost"
+          size="icon"
+          className="text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  },
+];
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={sectionData}
+        pagination={false}
+        scroll={{x:'max-content'}}
+        
+      />
+    );
+  };
+
 
     const openCreateDialog = () => {
     setForm({})
@@ -329,14 +490,23 @@ export default function HomeSections() {
     setForm({ ...form, [key]: value });
   };
     const [open,setOpen] = useState(false)
-
+   
   const getSectionDataAll = async ()=>{
     try{
+      setIsLoading(true)
       const res = await getSectionAPI()
+      if(res?.status===200){
+        setSectionData(res?.data?.data||[])
+      }
+
       console.log(res,'reeees of section here ')
     }
     catch(error){
       console.log(error)
+    }
+    finally{
+            setIsLoading(false)
+
     }
   }
   useEffect(()=>{
@@ -346,13 +516,47 @@ getSectionDataAll()
 
   const addSectionBuilder = async()=>{
 try{
+  if(form?.title===""){
+    message.error("Title is required")
+    return
+  }
+  setSectionLoading(true)
   const res = await addSectionAPI(form)
+  if(res?.status===201){
+    getSectionDataAll()
+    message.success(res?.data?.message || "Add Section Builder")
+    setForm({})
+    setOpen(false)
+  }
   console.log(res,'get the response here ')
 }
 catch(error){
+  message.error(error?.data?.message || "Something went wrong ")
   console.log(error)
 }
+finally{
+    setSectionLoading(false)
+
+}
   }
+
+   const [categorie, setCategories] = useState([]);
+  const fetchCategories = async () => {
+    try {
+      const res = await getCategoriesAPI();
+      const Response = res?.data?.data?.map((item) => ({
+        label: item?.name,
+        value: item?._id,
+      }));
+      setCategories(Response);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
 
   return (
@@ -367,7 +571,7 @@ catch(error){
           <Plus className="mr-2 h-4 w-4" /> Add Section
         </Button>
       </div>
-
+<SectionTable/>
       
     </div>
      <Modal
@@ -434,11 +638,24 @@ catch(error){
         {/* Category Id */}
         <div>
           <label className="block text-sm font-medium mb-1">Category</label>
-          <Input
-            placeholder="Category ID"
-            value={form.categoryId}
-            onChange={(e) => handleChange("categoryId", e.target.value)}
-          />
+         
+           <Select
+            className="w-full"
+            value={form?.categoryId}
+            onChange={(value) => handleChange("categoryId", value)}
+          >
+            {
+              categorie?.map((item)=>{
+                return (
+                  <>
+                                <Option value={item?.value}>{item?.label}</Option>
+
+                  </>
+                )
+              })
+            }
+            
+          </Select>
         </div>
 
         {/* Display Style */}
