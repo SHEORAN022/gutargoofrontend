@@ -6,13 +6,9 @@ import { useWebSeriesDB } from "@/hooks/useWebSeriesDB";
 import { useTVShowsDB } from "@/hooks/useTVShowsDB";
 import { useShortMoviesDB } from "@/hooks/useShortMoviesDB";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +16,8 @@ import { Plus, Pencil, Trash2, GripVertical, LayoutGrid, Rows3, Eye, EyeOff, Tre
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {getSectionAPI} from "../api/section"
+import {getSectionAPI,addSectionAPI} from "../api/section"
+import { Input, InputNumber, Modal, Select, Switch } from "antd";
 
 const SECTION_TYPES: { value: SectionType; label: string; icon: React.ElementType; description: string }[] = [
   { value: "continue_watching", label: "Continue Watching", icon: Clock, description: "User's in-progress content" },
@@ -222,25 +219,7 @@ export default function HomeSections() {
     }
   };
 
-  const openCreateDialog = () => {
-    setEditingSection(null);
-    setSelectedContent([]);
-    setFormData({
-      title: "",
-      section_type: "trending_now",
-      content_type: "all",
-      content_source: "auto",
-      category_id: undefined,
-      display_style: "horizontal_banner",
-      item_limit: 20,
-      is_active: true,
-      display_order: sections.length,
-      visible_tabs: ["home"],
-      trending_period_days: 7,
-      is_original_only: false,
-    });
-    setDialogOpen(true);
-  };
+
 
   const openEditDialog = (section: HomeSection) => {
     setEditingSection(section);
@@ -336,6 +315,21 @@ export default function HomeSections() {
     setSelectedContent(selectedContent.filter(c => c.id !== id));
   };
 
+
+    //New section module start from here 
+  const {Option} = Select
+  const [form, setForm] = useState( {});
+
+    const openCreateDialog = () => {
+    setForm({})
+      
+    setOpen(true);
+  };
+  const handleChange = (key, value) => {
+    setForm({ ...form, [key]: value });
+  };
+    const [open,setOpen] = useState(false)
+
   const getSectionDataAll = async ()=>{
     try{
       const res = await getSectionAPI()
@@ -349,7 +343,20 @@ export default function HomeSections() {
 getSectionDataAll()
   },[])
 
+
+  const addSectionBuilder = async()=>{
+try{
+  const res = await addSectionAPI(form)
+  console.log(res,'get the response here ')
+}
+catch(error){
+  console.log(error)
+}
+  }
+
+
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -361,359 +368,183 @@ getSectionDataAll()
         </Button>
       </div>
 
-      {/* Section Type Quick Add */}
-      <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
-        {SECTION_TYPES.map((type) => (
-          <Card
-            key={type.value}
-            className="cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => {
-              setEditingSection(null);
-              setSelectedContent([]);
-              setFormData({
-                ...formData,
-                title: type.label,
-                section_type: type.value,
-                display_order: sections.length,
-              });
-              setDialogOpen(true);
-            }}
+      
+    </div>
+     <Modal
+        maskClosable={false}
+        title={
+          <>
+            <div className="text-xl font-bold">
+              Add Section Builder
+            </div>
+          </>
+        }
+        footer={false}
+        open={open}
+        width={800}
+        onCancel={() => setOpen(false)}
+      >
+ <div className="rounded-2xl p-4 bg-white">
+      <div className="grid grid-cols-2 gap-4">
+
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Title *</label>
+          <Input
+            placeholder="Enter title"
+            value={form?.title}
+            onChange={(e) => handleChange("title", e.target.value)}
+          />
+        </div>
+
+        {/* Section Type */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Section Type</label>
+          <Select
+            className="w-full"
+            value={form?.sectionType}
+            onChange={(value) => handleChange("sectionType", value)}
           >
-            <CardContent className="p-3 text-center">
-              <type.icon className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <p className="text-xs font-medium">{type.label}</p>
-            </CardContent>
-          </Card>
-        ))}
+            <Option value="continue_watching">Continue Watching</Option>
+            <Option value="trending_now">Trending Now</Option>
+            <Option value="latest_releases">Latest Releases</Option>
+            <Option value="top_rated">Top Rated</Option>
+            <Option value="recommended">Recommended</Option>
+            <Option value="category_based">Category Based</Option>
+            <Option value="custom_collection">Custom Collection</Option>
+          </Select>
+        </div>
+
+        {/* Content Source */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Content Source</label>
+          <Select
+            className="w-full"
+            value={form.contentSource}
+            onChange={(value) => handleChange("contentSource", value)}
+          >
+            <Option value="auto">Auto</Option>
+            <Option value="most_viewed">Most Viewed</Option>
+            <Option value="recently_added">Recently Added</Option>
+            <Option value="watch_time_based">Watch Time Based</Option>
+            <Option value="admin_selected">Admin Selected</Option>
+          </Select>
+        </div>
+
+        {/* Category Id */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <Input
+            placeholder="Category ID"
+            value={form.categoryId}
+            onChange={(e) => handleChange("categoryId", e.target.value)}
+          />
+        </div>
+
+        {/* Display Style */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Display Style</label>
+          <Select
+            className="w-full"
+            value={form.displayStyle}
+            onChange={(value) => handleChange("displayStyle", value)}
+          >
+            <Option value="horizontal_banner">Horizontal Banner</Option>
+            <Option value="vertical_banner">Vertical Banner</Option>
+            <Option value="big_horizontal">Big Horizontal</Option>
+            <Option value="big_vertical">Big Vertical</Option>
+            <Option value="index_horizontal">Index Horizontal</Option>
+            <Option value="index_vertical">Index Vertical</Option>
+          </Select>
+        </div>
+
+        {/* Item Limit */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Item Limit</label>
+          <InputNumber
+            className="w-full"
+            min={1}
+            max={100}
+            value={form.itemLimit}
+            onChange={(value) => handleChange("itemLimit", value)}
+          />
+        </div>
+
+        {/* Display Order */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Display Order</label>
+          <InputNumber
+            className="w-full"
+            value={form.displayOrder}
+            onChange={(value) => handleChange("displayOrder", value)}
+          />
+        </div>
+
+        {/* Trending Days */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Trending Period (Days)</label>
+          <InputNumber
+            className="w-full"
+            value={form.trendingPeriodDays}
+            onChange={(value) => handleChange("trendingPeriodDays", value)}
+          />
+        </div>
+
+        {/* Visible Tabs */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Visible Tabs</label>
+          <Select
+            mode="multiple"
+            className="w-full"
+            value={form.visibleTabs}
+            onChange={(value) => handleChange("visibleTabs", value)}
+          >
+            <Option value="home">Home</Option>
+            <Option value="originals">Originals</Option>
+            <Option value="movies">Movies</Option>
+            <Option value="tv_shows">TV Shows</Option>
+            <Option value="web_series">Web Series</Option>
+            <Option value="short_movies">Short Movies</Option>
+          </Select>
+        </div>
+
+        {/* Switches */}
+        <div className="flex gap-6 col-span-2">
+          <div>
+            <label className="block text-sm mb-1">Active</label>
+            <Switch
+              checked={form.isActive}
+              onChange={(val) => handleChange("isActive", val)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Original Only</label>
+            <Switch
+              checked={form.isOriginalOnly}
+              onChange={(val) => handleChange("isOriginalOnly", val)}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Sections List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Content Sections ({sections.length})</CardTitle>
-          <CardDescription>Drag to reorder. Sections appear top-to-bottom on the app.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {isLoading ? (
-            <p className="text-muted-foreground py-4">Loading...</p>
-          ) : sections.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">No sections yet. Add your first section!</p>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                {sections.map((section) => (
-                  <SortableSectionCard
-                    key={section.id}
-                    section={section}
-                    onEdit={openEditDialog}
-                    onDelete={(id) => deleteSection.mutate(id)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-          )}
-        </CardContent>
-      </Card>
+      {/* Actions */}
+      <div className="flex justify-end gap-2 mt-6">
+        <button
+          onClick={() => setForm({})}
+          className="border px-4 py-2 rounded"
+        >
+          Cancel
+        </button>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingSection ? "Edit Section" : "Create New Section"}</DialogTitle>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label>Section Title *</Label>
-              <Input
-                placeholder="Trending Now"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Section Type</Label>
-                <Select
-                  value={formData.section_type}
-                  onValueChange={(v: SectionType) => setFormData({ ...formData, section_type: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {SECTION_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Content Type</Label>
-                <Select
-                  value={formData.content_type}
-                  onValueChange={(v) => setFormData({ ...formData, content_type: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {CONTENT_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Data Source</Label>
-                <Select
-                  value={formData.content_source}
-                  onValueChange={(v: ContentSource) => setFormData({ ...formData, content_source: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {CONTENT_SOURCES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Layout Style</Label>
-                <Select
-                  value={formData.display_style}
-                  onValueChange={(v: DisplayStyle) => setFormData({ ...formData, display_style: v })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="horizontal_banner">
-                      <div className="flex items-center gap-2">
-                        <Rows3 className="h-4 w-4" />
-                        <span>Horizontal Banner</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="vertical_banner">
-                      <div className="flex items-center gap-2">
-                        <LayoutGrid className="h-4 w-4" />
-                        <span>Vertical Banner</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="big_horizontal">
-                      <div className="flex items-center gap-2">
-                        <Rows3 className="h-4 w-4" />
-                        <span>Big Horizontal</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="big_vertical">
-                      <div className="flex items-center gap-2">
-                        <LayoutGrid className="h-4 w-4" />
-                        <span>Big Vertical</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="index_horizontal">
-                      <div className="flex items-center gap-2">
-                        <List className="h-4 w-4" />
-                        <span>Index Horizontal (1,2,3)</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="index_vertical">
-                      <div className="flex items-center gap-2">
-                        <List className="h-4 w-4" />
-                        <span>Index Vertical (1,2,3)</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Manual Content Selection for Admin Selected */}
-            {formData.content_source === "admin_selected" && (
-              <div className="space-y-3">
-                <Label>Select Content Manually</Label>
-                
-                {/* Content Type Selector */}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={contentSearchType === "movies" ? "default" : "outline"}
-                    onClick={() => setContentSearchType("movies")}
-                  >
-                    <Film className="h-3 w-3 mr-1" /> Movies
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={contentSearchType === "web_series" ? "default" : "outline"}
-                    onClick={() => setContentSearchType("web_series")}
-                  >
-                    <Tv className="h-3 w-3 mr-1" /> Web Series
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={contentSearchType === "tv_shows" ? "default" : "outline"}
-                    onClick={() => setContentSearchType("tv_shows")}
-                  >
-                    <Tv className="h-3 w-3 mr-1" /> TV Shows
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={contentSearchType === "short_movies" ? "default" : "outline"}
-                    onClick={() => setContentSearchType("short_movies")}
-                  >
-                    <Film className="h-3 w-3 mr-1" /> Short Movies
-                  </Button>
-                </div>
-
-                {/* Content List */}
-                <div className="border rounded-lg">
-                  <ScrollArea className="h-40">
-                    <div className="p-2 space-y-1">
-                      {getContentList().length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No content available</p>
-                      ) : (
-                        getContentList().map((item) => (
-                          <div
-                            key={item.id}
-                            className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-                              selectedContent.find(c => c.id === item.id)
-                                ? "bg-primary/10 border border-primary/30"
-                                : "hover:bg-muted"
-                            }`}
-                            onClick={() => addContentToSelection(item)}
-                          >
-                            {item.thumbnail_url ? (
-                              <img src={item.thumbnail_url} alt="" className="h-8 w-12 rounded object-cover" />
-                            ) : (
-                              <div className="h-8 w-12 rounded bg-muted flex items-center justify-center">
-                                <Film className="h-3 w-3 text-muted-foreground" />
-                              </div>
-                            )}
-                            <span className="text-sm flex-1 truncate">{item.title}</span>
-                            {selectedContent.find(c => c.id === item.id) && (
-                              <Badge className="bg-primary text-xs">Added</Badge>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </ScrollArea>
-                </div>
-
-                {/* Selected Content */}
-                {selectedContent.length > 0 && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground mb-2 block">
-                      Selected ({selectedContent.length})
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedContent.map((item) => (
-                        <Badge key={item.id} variant="secondary" className="pr-1 flex items-center gap-1">
-                          <span className="text-xs">{item.title}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4 p-0 hover:bg-destructive/20"
-                            onClick={() => removeContentFromSelection(item.id)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {formData.section_type === "category_based" && (
-              <div>
-                <Label>Category</Label>
-                <Select
-                  value={formData.category_id || ""}
-                  onValueChange={(v) => setFormData({ ...formData, category_id: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {formData.section_type === "trending_now" && (
-              <div>
-                <Label>Trending Period (days)</Label>
-                <Select
-                  value={String(formData.trending_period_days)}
-                  onValueChange={(v) => setFormData({ ...formData, trending_period_days: parseInt(v) })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="7">Last 7 days</SelectItem>
-                    <SelectItem value="14">Last 14 days</SelectItem>
-                    <SelectItem value="30">Last 30 days</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <Label>Item Limit</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={formData.item_limit}
-                  onChange={(e) => setFormData({ ...formData, item_limit: parseInt(e.target.value) || 20 })}
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <Switch
-                  checked={formData.is_original_only}
-                  onCheckedChange={(v) => setFormData({ ...formData, is_original_only: v })}
-                />
-                <Label>Originals Only</Label>
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
-                />
-                <Label>Active</Label>
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-2 block">Visible On Tabs</Label>
-              <div className="flex flex-wrap gap-3">
-                {TAB_OPTIONS.map((tab) => (
-                  <label key={tab.value} className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={formData.visible_tabs.includes(tab.value)}
-                      onCheckedChange={() => toggleTab(tab.value)}
-                    />
-                    <span className="text-sm">{tab.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!formData.title}>
-              {editingSection ? "Update Section" : "Create Section"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <Button  onClick={() => addSectionBuilder()}>
+          Submit
+        </Button>
+      </div>
     </div>
+
+
+      </Modal>
+      </>
   );
 }

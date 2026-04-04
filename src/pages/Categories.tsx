@@ -4,7 +4,12 @@ import { Plus, Trash2, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getCategoryListingAPI,addCategoryAPI ,editCategoryAPI,deleteCategoryAPI} from "../api/category.js";
+import {
+  getCategoryListingAPI,
+  addCategoryAPI,
+  editCategoryAPI,
+  deleteCategoryAPI,
+} from "../api/category.js";
 import { Input, message, Modal, Spin, Table } from "antd";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 
@@ -115,14 +120,14 @@ export default function Categories() {
   const closeDialog = () => {
     setDialogOpen(false);
   };
-    const [open, setOpen] = useState(false);
-    const [form,setForm] = useState({})
-  const [deleteOpen,setDeleteOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({});
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [categoryData, setCategoryData] = useState([]);
-  const [loading,setLoading] = useState(false)
-  const [deleteLoading,setDeleteLoading] = useState(false)
-  const [deleteId,setDeleteId] = useState("")
-    const deleteCategory = async () => {
+  const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState("");
+  const deleteCategory = async () => {
     try {
       setDeleteLoading(true);
       const res = await deleteCategoryAPI(deleteId);
@@ -138,30 +143,29 @@ export default function Categories() {
       console.log(error);
     } finally {
       setDeleteLoading(false);
-      setDeleteOpen(false)
+      setDeleteOpen(false);
     }
   };
-  const [editData,setEditData] = useState(false)
+  const [editData, setEditData] = useState(false);
 
-const onEdit = (data) =>{
-  // setEditData(!editData)
-  // setDialogOpen(true)
-  // const Response = data?.data
-  setEditData(true)
-  setOpen(true)
-  setDeleteId(data?._id)
-  setForm({
-    name:data?.name,
-  })
-
-}
+  const onEdit = (data) => {
+    // setEditData(!editData)
+    // setDialogOpen(true)
+    // const Response = data?.data
+    setEditData(true);
+    setOpen(true);
+    setDeleteId(data?._id);
+    setForm({
+      name: data?.name,
+    });
+  };
   const BannerTable = () => {
     const columns = [
       {
         title: "Category Name",
         key: "name",
         align: "center",
-        dataIndex:"name"
+        dataIndex: "name",
       },
 
       {
@@ -170,7 +174,7 @@ const onEdit = (data) =>{
         width: 100,
         render: (_, banner) => (
           <div className="flex gap-1">
-             <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
@@ -194,57 +198,52 @@ const onEdit = (data) =>{
     );
   };
 
-
-
   const getCategoryData = async () => {
     try {
       const res = await getCategoryListingAPI();
       console.log(res, "get tesss");
-      setLoading(true)
+      setLoading(true);
       if (res?.status === 200) {
         const Response = res?.data?.data || [];
         setCategoryData(Response);
-        setLoading(false)
+        setLoading(false);
       }
     } catch (error) {
       console.log(error);
-    }
-    finally{
-      setLoading(false)
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
     getCategoryData();
   }, []);
-const [categoryAddLoading,setCategoryAddLoading] = useState(false)
-const addCategory  = async ()=>{
-    try{
-      setCategoryAddLoading(true)
-      if(form?.name===""){
-        message.error("Category Name is required ")
-        return 
+  const [categoryAddLoading, setCategoryAddLoading] = useState(false);
+  const addCategory = async () => {
+    try {
+      setCategoryAddLoading(true);
+      if (form?.name === "") {
+        message.error("Category Name is required ");
+        return;
       }
-      const res = editData? await editCategoryAPI(deleteId,form) :  await addCategoryAPI(form)
-      if(res?.status===201 || res?.status ===200){
-        if(editData){
-          setEditData(false)
+      const res = editData
+        ? await editCategoryAPI(deleteId, form)
+        : await addCategoryAPI(form);
+      if (res?.status === 201 || res?.status === 200) {
+        if (editData) {
+          setEditData(false);
         }
-        setOpen(false)
-        setForm({})
-        getCategoryData()
+        setOpen(false);
+        setForm({});
+        getCategoryData();
       }
-      
+    } catch (error) {
+      console.log(error);
+      message.error(error?.data?.message || "Something went wrong");
+    } finally {
+      setCategoryAddLoading(false);
     }
-    catch(error){
-      console.log(error)
-      message.error(error?.data?.message || "Something went wrong")
-    }
-    finally{
-            setCategoryAddLoading(false)
-
-    }
-  }
-   if (loading) {
+  };
+  if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -253,62 +252,86 @@ const addCategory  = async ()=>{
   }
   return (
     <>
-     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
-            Categories
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage content categories for your platform
-          </p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight">
+              Categories
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage content categories for your platform
+            </p>
+          </div>
+          <Button
+            className="gap-2"
+            onClick={() => {
+              setEditData(false);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Add Category
+          </Button>
         </div>
-        <Button className="gap-2" onClick={()=>setOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Category
-        </Button>
+        <BannerTable />
       </div>
-      <BannerTable />
-    </div>
-            <Modal maskClosable={false} title={(<><div className="text-xl font-bold">{editData?"Edit":"Add"} Category</div></>)} footer={false} open={open} width={800}  onCancel={()=>setOpen(false)} >
-
-            <div className="   rounded-2xl ">
-              <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="Title"
-                      className="border p-2 rounded"
-                      value={form?.name}
-                      onChange={(e) =>setForm({...form,name:e?.target?.value})}
-                    />
-                  </div>
-                  
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-6">
-                 <button
-                onClick={()=>{
-                  setForm({})
-                  setOpen(false)
-                }}
-                className="border px-4 py-2 rounded">Cancel</button>
-                <Button onClick={()=>addCategory()}>{categoryAddLoading? (<Spin/>):(<>{editData?"Update":"Submit"}</>)}</Button>
+      <Modal
+        maskClosable={false}
+        title={
+          <>
+            <div className="text-xl font-bold">
+              {editData ? "Edit" : "Add"} Category
+            </div>
+          </>
+        }
+        footer={false}
+        open={open}
+        width={800}
+        onCancel={() => setOpen(false)}
+      >
+        <div className="   rounded-2xl ">
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  placeholder="Title"
+                  className="border p-2 rounded"
+                  value={form?.name}
+                  onChange={(e) => setForm({ ...form, name: e?.target?.value })}
+                />
               </div>
             </div>
-    </Modal>
- <CommonDeleteModal
+          </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              onClick={() => {
+                setForm({});
+                setOpen(false);
+              }}
+              className="border px-4 py-2 rounded"
+            >
+              Cancel
+            </button>
+            <Button onClick={() => addCategory()}>
+              {categoryAddLoading ? (
+                <Spin />
+              ) : (
+                <>{editData ? "Update" : "Submit"}</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <CommonDeleteModal
         open={deleteOpen}
         onCancel={() => setDeleteOpen(false)}
         onConfirm={deleteCategory}
         loading={deleteLoading}
       />
-
     </>
-   
   );
 }

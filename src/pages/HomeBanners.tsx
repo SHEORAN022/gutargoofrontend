@@ -11,10 +11,10 @@ import {
 
 import axios from "axios";
 import { toast } from "sonner";
-import { getAllBannersAPI, deleteBannerAPI,addBannerAPI } from "../api/banner";
+import { getAllBannersAPI,editBannerAPI, deleteBannerAPI,addBannerAPI } from "../api/banner";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
-import { Image, Input, message, Modal, Select, Table } from "antd";
+import { Image, Input, message, Modal, Select, Spin, Table } from "antd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WebSeries from "./WebSeries";
 
@@ -178,8 +178,9 @@ const onEdit = (data) =>{
   // setEditData(!editData)
   // setDialogOpen(true)
   // const Response = data?.data
-  setEditData(!editData)
+  setEditData(true)
   setDialogOpen(true)
+  setDeleteId(data?._id)
   setPreviewBannerLogo(data?.bannerImage?.url)
   setPreviewLogo(data?.logoImage?.url)
   setForm({
@@ -187,16 +188,17 @@ const onEdit = (data) =>{
     bannerImage:data?.bannerImage||"",
     categoryId:data?.categoryId?._id || "",
     logoImage:data?.logoImage || "",
-    WebSeries:data?.movieId ||"",
-    movies:data?.movieId || ""
+    WebSeries:data?.movieId?._id ||"",
+    movies:data?.movieId?._id || ""
 
   })
 
 }
-  
+  const [bannerLoadingAdd,setBannerLaodingAdd] =useState(false)
 
 const addBannerAPIData = async () => {
   try {
+    setBannerLaodingAdd(true)
     const formData = new FormData();
 
     Object.keys(form).forEach((key) => {
@@ -222,8 +224,19 @@ const addBannerAPIData = async () => {
       }
     });
 
-    const res = await addBannerAPI(formData);
-    if(res?.status===201){
+    const res = editData? await editBannerAPI(deleteId,form) : await addBannerAPI(formData);
+    if(res?.status===201||res?.status===200){
+      if(res?.status===201){
+              message.success(res?.data?.message||"Banner Added Successfully")
+
+      }
+      else if(res?.status===200){
+                      message.success(res?.data?.message||"Banner Updated Successfully")
+
+      }
+      if(editData){
+        setEditData(false)
+      }
       fetchBanners()
       setDialogOpen(false)
       setForm({})
@@ -234,6 +247,10 @@ const addBannerAPIData = async () => {
     console.log(res);
   } catch (error) {
     console.log(error);
+  }
+  finally{
+        setBannerLaodingAdd(false)
+
   }
 };
 
@@ -309,6 +326,11 @@ const addBannerAPIData = async () => {
 
 
   const openCreateDialog = () => {
+      setEditData(false);
+
+    setForm({})
+    setPreviewBannerLogo(null)
+    setPreviewLogo(null)
     setEditingBanner(null);
  
     setDialogOpen(true);
@@ -515,11 +537,16 @@ const addBannerAPIData = async () => {
               <div className="flex justify-end gap-2 mt-6">
                  <button
                 onClick={()=>{
-                  setForm({})
-                  setDialogOpen(false)
+
+                  setEditData(false);
+
+    setForm({})
+    setPreviewBannerLogo(null)
+    setPreviewLogo(null)
+    setEditingBanner(null);
                 }}
                 className="border px-4 py-2 rounded">Cancel</button>
-                <Button onClick={()=>addBannerAPIData()}>Submit</Button>
+                <Button onClick={()=>addBannerAPIData()}>{bannerLoadingAdd? (<Spin/>):(<>{editData?"Update":"Submit"}</>)}</Button>
               </div>
             </div>
          
