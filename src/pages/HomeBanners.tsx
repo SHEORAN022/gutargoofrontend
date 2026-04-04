@@ -211,19 +211,29 @@ export default function HomeBanners() {
       categoryId: data?.categoryId?._id || "",
       logoImage: data?.logoImage || "",
       webseries: data?.movieId?._id || "",
-      movies: data?.movieId?._id || "",
+      movieId: data?.movieId?._id || "",
     });
   };
 
   const [bannerLoading, setBannerLoading] = useState(false);
 
   const addBannerAPIData = async () => {
+    
  if (
   (form?.title === "" || form?.title === undefined) ||
   (form?.categoryId === "" || form?.categoryId === undefined)
 ) {
   message.error("Title and Category is required");
   return;
+}
+
+if(!form?.bannerImage){
+   message.error("Banner Image is required")
+  return
+}
+if(!form?.logoImage){
+   message.error("Logo Image is required")
+  return
 }
 
     try {
@@ -265,15 +275,17 @@ export default function HomeBanners() {
       }
 
       if (res?.status === 200 || res?.status === 201) {
-        fetchBanners();
-
-        setDialogOpen(false);
-        setForm({});
+          setForm({});
         setPreviewBannerLogo(null);
         setPreviewLogo(null);
 
         setEditData(false);
         setEditId(null);
+
+        fetchBanners();
+
+        setDialogOpen(false);
+      
 
         message.success(editData ? "Banner Updated" : "Banner Added");
       }
@@ -360,7 +372,7 @@ export default function HomeBanners() {
 
   const openCreateDialog = () => {
     setEditData(false);
-    setEditId(null);
+    setEditId("");
     setForm({});
     setPreviewBannerLogo(null);
     setPreviewLogo(null);
@@ -446,9 +458,9 @@ export default function HomeBanners() {
                   showSearch={true}
                   placeholder="Select Movies"
                   className="border p-2 rounded w-full"
-                  value={form?.movies}
-                  // onChange={(e) =>handleChange("movies",e?.target?.value)}
-                  onChange={(e) => setForm({ ...form, movies: e })}
+                  value={form?.movieId}
+                  // onChange={(e) =>handleChange("movieId",e?.target?.value)}
+                  onChange={(e) => setForm({ ...form, movieId: e })}
                   options={allMovies}
                   filterOption={(input, option) =>
                     option?.label?.toLowerCase().includes(input.toLowerCase())
@@ -485,7 +497,7 @@ export default function HomeBanners() {
               </div>
               <div>
                 <div className="block text-sm font-medium text-gray-700 mb-1">
-                  Categories
+                  Categories <span className="text-red-500">*</span>
                 </div>
                 <Select
                   placeholder="Select Category"
