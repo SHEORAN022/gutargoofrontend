@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 
 import {
   ImageOffIcon,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import CommonDeleteModal from "../components/AntdComponents/Modal";
 import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
 import { Image, message, Modal, Select, Table } from "antd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import WebSeries from "./WebSeries";
 
 export default function HomeBanners() {
   // const { banners, isLoading, createBanner, updateBanner, deleteBanner, reorderBanners } = useHomeBanners();
@@ -59,14 +61,31 @@ export default function HomeBanners() {
 
   const BannerTable = () => {
     const columns = [
+       {
+        title: "Banner Image",
+        dataIndex: "bannerImage",
+        key: "bannerImage",
+        render: (img, banner) =>
+          banner.bannerImage?.url ? (
+            <img
+              src={banner.bannerImage?.url}
+              alt=""
+              className="h-12 w-20 rounded object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-20 items-center justify-center rounded bg-muted">
+              <ImageOffIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
+          ),
+      },
       {
         title: "Mobile Image",
         dataIndex: "mobileImage",
         key: "mobileImage",
         render: (img, banner) =>
-          banner?.mobileImage ? (
+          banner.logoImage?.url ? (
             <img
-              src={banner.mobileImage}
+              src={banner.logoImage?.url}
               alt=""
               className="h-12 w-20 rounded object-cover"
             />
@@ -83,15 +102,25 @@ export default function HomeBanners() {
         render: (_, record) => (
           <div>
             <div style={{ fontWeight: 500 }}>{record.title || "No Title"}</div>
-            <div style={{ fontSize: 12, color: "#888" }}>{record.subtitle}</div>
           </div>
         ),
       },
       {
-        title: "Description",
-        dataIndex: "description",
-        key: "description",
+        title: "Category",
+        dataIndex: "categoryId",
+        key: "categoryId",
         align: "center",
+        render :(data) => {
+          return (
+            <>
+            <div style={{ fontWeight: 500 }}>
+              {
+                data?.name
+              }
+            </div>
+            </>
+          )
+        }
       },
       {
         title: "Actions",
@@ -99,9 +128,9 @@ export default function HomeBanners() {
         width: 100,
         render: (_, banner) => (
           <div className="flex gap-1">
-            {/* <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(banner)}>
               <Pencil className="h-4 w-4" />
-            </Button> */}
+            </Button>
 
             <Button
               onClick={() => {
@@ -144,6 +173,28 @@ export default function HomeBanners() {
       console.log(error);
     }
   };
+  const [editData,setEditData] = useState(false)
+const onEdit = (data) =>{
+  // setEditData(!editData)
+  // setDialogOpen(true)
+  console.log(data,'data deeee')
+  // const Response = data?.data
+  setEditData(!editData)
+  setDialogOpen(true)
+  setPreviewBannerLogo(data?.bannerImage?.url)
+  setPreviewLogo(data?.logoImage?.url)
+  setForm({
+    title:data?.title,
+    bannerImage:data?.bannerImage||"",
+    categoryId:data?.categoryId?._id || "",
+    logoImage:data?.logoImage || "",
+    WebSeries:data?.movieId ||"",
+    movies:data?.movieId || ""
+
+  })
+
+}
+  
 
 const addBannerAPIData = async () => {
   try {
@@ -310,7 +361,7 @@ const addBannerAPIData = async () => {
         onConfirm={deleteBanner}
         loading={deleteLoading}
       />
-        <Modal maskClosable={false} title={(<><div className="text-xl font-bold">Add Banner</div></>)} footer={false} open={dialogOpen} width={800}  onCancel={()=>setDialogOpen(false)} >
+        <Modal maskClosable={false} title={(<><div className="text-xl font-bold">{editData?"Edit":"Add"} Banner</div></>)} footer={false} open={dialogOpen} width={800}  onCancel={()=>setDialogOpen(false)} >
            
 
             <div className="   rounded-2xl ">
@@ -430,7 +481,7 @@ const addBannerAPIData = async () => {
                   </div>
 
                   <div className="image-upload-card box boxShadowData">
-                    <h4 className="text-xl"> Logo Image</h4>
+                    <h4 className="text-xl"> Mobile Logo Image</h4>
                     <p className="image-hint">PNG preferred, transparent bg</p>
                     <div className="file-upload">
                       <input
