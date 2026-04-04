@@ -151,6 +151,8 @@ export default function HomeBanners() {
         rowKey="_id" // or "id" depending on your data
         pagination={false}
         loading={isLoading}
+        scroll={{x:'max-content'}}
+
       />
     );
   };
@@ -407,6 +409,7 @@ export default function HomeBanners() {
         loading={deleteLoading}
       />
       <Modal
+      closable={false}
         maskClosable={false}
         title={
           <>
@@ -499,7 +502,7 @@ export default function HomeBanners() {
             </div>
             <div className="grid grid-cols-2   gap-3">
               <div className="image-upload-card  boxShadowData">
-                <h4 className="text-xl"> Banner Logo</h4>
+                <h4 className="text-xl"> Banner Image</h4>
                 <p className="image-hint">PNG preferred, transparent bg</p>
                 <div className="file-upload">
                   <input

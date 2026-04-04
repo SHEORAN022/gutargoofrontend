@@ -160,6 +160,7 @@ export default function Categories() {
     setDeleteId(data?._id);
     setForm({
       name: data?.name,
+      categoryType:data?.categoryType
     });
   };
   const BannerTable = () => {
@@ -280,6 +281,7 @@ export default function Categories() {
         <BannerTable />
       </div>
       <Modal
+      closable={false}
         maskClosable={false}
         title={
           <>
@@ -327,6 +329,8 @@ export default function Categories() {
               onClick={() => {
                 setForm({});
                 setOpen(false);
+                                setEditData(false);
+
               }}
               className="border px-4 py-2 rounded"
             >

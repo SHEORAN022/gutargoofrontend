@@ -54,6 +54,7 @@ import {
   X,
   Film,
   Tv,
+  GripVerticalIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -64,6 +65,10 @@ import {
   useSensors,
   DragEndEvent,
 } from "@dnd-kit/core";
+
+
+
+
 import {
   arrayMove,
   SortableContext,
@@ -77,6 +82,7 @@ import {
   addSectionAPI,
   deleteSectionAPI,
   editSectionAPI,
+  dragAndDropAPI
 } from "../api/section";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 
@@ -90,7 +96,7 @@ import {
   Switch,
   Table,
 } from "antd";
-import { getCategoriesAPI, getMoviesSelectAPI } from "../api/movies";
+import { getCategoriesAPI, getMoviesSelectAPI} from "../api/movies";
 const SECTION_TYPES: {
   value: SectionType;
   label: string;
@@ -309,6 +315,45 @@ export default function HomeSections() {
   const [selectedContent, setSelectedContent] = useState<SelectedContent[]>([]);
   const [contentSearchType, setContentSearchType] = useState<string>("movies");
 
+  //
+//   const DraggableRow = (props) => {
+//   const { attributes, listeners, setNodeRef, transform, transition } =
+//     useSortable({ id: props["data-row-key"] });
+
+//   const style = {
+//     ...props.style,
+//     transform: CSS.Transform.toString(transform),
+//     transition,
+//     cursor: "move",
+//   };
+
+//   return <tr ref={setNodeRef} style={style} {...attributes} {...listeners} {...props} />;
+// };
+
+
+const DraggableRow = (props) => {
+  const { setNodeRef, transform, transition } = useSortable({
+    id: props["data-row-key"],
+  });
+
+  const style = {
+    ...props.style,
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return <tr ref={setNodeRef} style={style} {...props} />;
+};
+const DragHandle = ({ id }) => {
+  const { attributes, listeners } = useSortable({ id });
+
+  return (
+    <span {...attributes} {...listeners}>
+      <GripVerticalIcon className="cursor-grab text-gray-400" />
+    </span>
+  );
+}; 
+
   const {
     items: sectionItems,
     addItem,
@@ -367,15 +412,7 @@ export default function HomeSections() {
     }),
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = sections.findIndex((s) => s.id === active.id);
-      const newIndex = sections.findIndex((s) => s.id === over.id);
-      const newOrder = arrayMove(sections, oldIndex, newIndex);
-      reorderSections.mutate(newOrder.map((s) => s.id));
-    }
-  };
+
 
   const openEditDialog = (section: HomeSection) => {
     setEditingSection(section);
@@ -507,8 +544,100 @@ export default function HomeSections() {
     });
   };
 
+  const arrayMove = (array, from, to) => {
+  const newArr = [...array];
+  const startIndex = from < 0 ? newArr.length + from : from;
+
+  if (startIndex >= 0 && startIndex < newArr.length) {
+    const endIndex = to < 0 ? newArr.length + to : to;
+    const [item] = newArr.splice(from, 1);
+    newArr.splice(endIndex, 0, item);
+  }
+
+  return newArr;
+};
+
+const [data, setData] = useState(sectionData);
+
+useEffect(() => {
+  setData(sectionData);
+}, [sectionData]);
+
+// const handleDragEnd = (event) => {
+//   const { active, over } = event;
+
+//   if (active.id !== over?.id) {
+//     const oldIndex = data.findIndex((i) => i._id === active.id);
+//     const newIndex = data.findIndex((i) => i._id === over.id);
+
+//     setData(arrayMove(data, oldIndex, newIndex));
+//   }
+// };
+
+// const handleDragEnd = async (event) => {
+//   const { active, over } = event;
+
+//   if (!over || active.id === over.id) return;
+
+//   const oldIndex = data.findIndex((i) => i._id === active.id);
+//   const newIndex = data.findIndex((i) => i._id === over.id);
+
+//   const newData = arrayMove(data, oldIndex, newIndex);
+//   setData(newData);
+
+//   // 🔥 Send updated order to backend
+//   try {
+//     const payload = newData.map((item, index) => ({
+//       _id: item._id,
+//       displayOrder: index, // or position
+//     }));
+
+//     await dragAndDropAPI(payload); // create this API
+//     message.success("Order updated");
+    
+//   } catch (error) {
+//     message.error("Failed to update order");
+//     console.log(error);
+//   }
+// };
+const handleDragEnd = async (event) => {
+  const { active, over } = event;
+
+  if (!over || active.id === over.id) return;
+
+  const oldIndex = data.findIndex((i) => i._id === active.id);
+  const newIndex = data.findIndex((i) => i._id === over.id);
+
+  const newData = arrayMove(data, oldIndex, newIndex);
+  setData(newData);
+
+  try {
+    // 🔥 Only send affected range
+    const start = Math.min(oldIndex, newIndex);
+    const end = Math.max(oldIndex, newIndex);
+
+    const payload = newData.slice(start, end + 1).map((item, index) => ({
+      _id: item._id,
+      displayOrder: start + index,
+    }));
+const finalData = payload?.map((item)=>item?._id)
+    await dragAndDropAPI({ids:[...finalData]});
+
+    message.success("Order updated");
+  } catch (error) {
+    message.error("Failed to update order");
+    console.log(error);
+  }
+};
   const SectionTable = () => {
     const columns = [
+     {
+  title: "",
+  key: "sort",
+  width: 50,
+  align: "center",
+  render: (_, record) => <DragHandle id={record._id} />,
+},
       {
         title: "Title",
         key: "title",
@@ -518,16 +647,7 @@ export default function HomeSections() {
         ),
       },
 
-      // {
-      //   title: "Section Type",
-      //   dataIndex: "sectionType",
-      //   key: "sectionType",
-      //   align: "center",
-      //   render: (data) => (
-      //     <span>{data?.replaceAll("_", " ")}</span>
-      //   ),
-      // },
-
+     
       {
         title: "Content Source",
         dataIndex: "contentSource",
@@ -588,7 +708,10 @@ export default function HomeSections() {
         width: 100,
         render: (_, item) => (
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+            <Button variant="ghost" size="icon" onClick={(e) => {
+  e.stopPropagation();
+  onEdit(item);
+}}>
               <Pencil className="h-4 w-4" />
             </Button>
 
@@ -609,13 +732,32 @@ export default function HomeSections() {
     ];
 
     return (
-      <Table
-        columns={columns}
-        dataSource={sectionData}
-        pagination={false}
-        scroll={{ x: "max-content" }}
-        loading={isLoading}
-      />
+      // <Table
+      //   columns={columns}
+      //   dataSource={sectionData}
+      //   pagination={false}
+      //   scroll={{ x: "max-content" }}
+      //   loading={isLoading}
+      // />
+      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+  <SortableContext
+    items={data.map((i) => i._id)}
+    strategy={verticalListSortingStrategy}
+  >
+    <Table
+      rowKey="_id"
+      columns={columns}
+      dataSource={data}
+      pagination={false}
+        scroll={{x:'max-content'}}
+      components={{
+        body: {
+          row: DraggableRow,
+        },
+      }}
+    />
+  </SortableContext>
+</DndContext>
     );
   };
 
@@ -670,19 +812,22 @@ export default function HomeSections() {
   }, []);
 
   const addSectionBuilder = async () => {
-    if (form?.title === "" || form?.title === undefined) {
+    if (!form || !form.title) {
       message.error("Title is required");
       return;
     }
     try {
       setSectionLoading(true);
-      const finaldata = {
-        ...form,
-        sectionData: {
-          movies: [...form?.movies],
-        },
-      };
-      delete finaldata?.movies;
+       const finaldata = {
+      ...form,
+      sectionData: {
+        movies: form?.movies || [], // ✅ safe fallback
+      },
+    };
+
+      if ("movies" in finaldata) {
+      delete finaldata.movies;
+    }
       const res = editData
         ? await editSectionAPI(deleteId, finaldata)
         : await addSectionAPI(finaldata);
@@ -698,7 +843,7 @@ export default function HomeSections() {
       }
       console.log(res, "get the response here ");
     } catch (error) {
-      message.error(error?.data?.message || "Something went wrong ");
+      message.error(error?.message || "Something went wrong ");
       console.log(error);
     } finally {
       setSectionLoading(false);
@@ -769,6 +914,7 @@ export default function HomeSections() {
         footer={false}
         open={open}
         width={800}
+        closable={false}
         onCancel={() => setOpen(false)}
       >
         <div className="rounded-2xl p-4 bg-white">
@@ -891,23 +1037,7 @@ export default function HomeSections() {
               />
             </div>
 
-            {/* Visible Tabs */}
-            {/* <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Visible Tabs</label>
-          <Select
-            mode="multiple"
-            className="w-full"
-            value={form.visibleTabs}
-            onChange={(value) => handleChange("visibleTabs", value)}
-          >
-            <Option value="home">Home</Option>
-            <Option value="originals">Originals</Option>
-            <Option value="movies">Movies</Option>
-            <Option value="tv_shows">TV Shows</Option>
-            <Option value="web_series">Web Series</Option>
-            <Option value="short_movies">Short Movies</Option>
-          </Select>
-        </div> */}
+           
 
             {/* Switches */}
             <div className="flex gap-6 col-span-2">
@@ -932,7 +1062,11 @@ export default function HomeSections() {
           {/* Actions */}
           <div className="flex justify-end gap-2 mt-6">
             <button
-              onClick={() => setForm({})}
+              onClick={() => {
+                setEditData(false);
+                setOpen(false);
+                setForm({});
+              }}
               className="border px-4 py-2 rounded"
             >
               Cancel
