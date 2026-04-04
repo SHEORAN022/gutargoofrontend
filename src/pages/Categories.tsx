@@ -10,7 +10,7 @@ import {
   editCategoryAPI,
   deleteCategoryAPI,
 } from "../api/category.js";
-import { Input, message, Modal, Spin, Table } from "antd";
+import { Input, message, Modal, Select, Spin, Table } from "antd";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 
 interface Category {
@@ -27,6 +27,9 @@ interface Category {
 }
 
 export default function Categories() {
+
+  const {Option} = Select
+
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -304,6 +307,19 @@ export default function Categories() {
                   onChange={(e) => setForm({ ...form, name: e?.target?.value })}
                 />
               </div>
+               <div>
+          <label className="block text-sm font-medium mb-1">Category Type</label>
+          <Select
+            className="w-full"
+            value={form?.categoryType}
+                  onChange={(e) => setForm({ ...form, categoryType: e })}
+          >
+            {/* <Option value="home">Home</Option> */}
+            <Option value="movie">Movie</Option>
+            <Option value="webseries">Webseries</Option>
+            <Option value="tvshows">Tv Shows</Option>
+          </Select>
+        </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-6">

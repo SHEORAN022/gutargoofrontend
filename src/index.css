@@ -233,3 +233,6 @@ textarea:focus { border-color: #DC143C; }
 .ant-select{
   height: 36px;
 }
+.ant-input{
+  height: 36px;
+}

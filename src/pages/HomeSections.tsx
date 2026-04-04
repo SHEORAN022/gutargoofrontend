@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { useHomeSections, HomeSection, SectionFormData, SectionType, ContentSource, DisplayStyle, AppTab, useSectionItems } from "@/hooks/useHomeSections";
+import {
+  useHomeSections,
+  HomeSection,
+  SectionFormData,
+  SectionType,
+  ContentSource,
+  DisplayStyle,
+  AppTab,
+  useSectionItems,
+} from "@/hooks/useHomeSections";
 import { useCategories } from "@/hooks/useCategories";
 import { useMoviesDB } from "@/hooks/useMoviesDB";
 import { useWebSeriesDB } from "@/hooks/useWebSeriesDB";
@@ -7,25 +16,129 @@ import { useTVShowsDB } from "@/hooks/useTVShowsDB";
 import { useShortMoviesDB } from "@/hooks/useShortMoviesDB";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2, GripVertical, LayoutGrid, Rows3, Eye, EyeOff, TrendingUp, Clock, Star, Heart, FolderOpen, List, X, Film, Tv } from "lucide-react";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  GripVertical,
+  LayoutGrid,
+  Rows3,
+  Eye,
+  EyeOff,
+  TrendingUp,
+  Clock,
+  Star,
+  Heart,
+  FolderOpen,
+  List,
+  X,
+  Film,
+  Tv,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {getSectionAPI,addSectionAPI} from "../api/section"
-import { Input, InputNumber, message, Modal, Select, Switch, Table } from "antd";
-import {getCategoriesAPI} from "../api/movies"
-const SECTION_TYPES: { value: SectionType; label: string; icon: React.ElementType; description: string }[] = [
-  { value: "continue_watching", label: "Continue Watching", icon: Clock, description: "User's in-progress content" },
-  { value: "trending_now", label: "Trending Now", icon: TrendingUp, description: "Popular content based on views" },
-  { value: "latest_releases", label: "Latest Releases", icon: Star, description: "Recently added content" },
-  { value: "top_rated", label: "Top Rated", icon: Star, description: "Highest rated content" },
-  { value: "recommended", label: "Recommended", icon: Heart, description: "Personalized suggestions" },
-  { value: "category_based", label: "Category Based", icon: FolderOpen, description: "Content from specific category" },
-  { value: "custom_collection", label: "Custom Collection", icon: List, description: "Manually selected content" },
+import {
+  getSectionAPI,
+  addSectionAPI,
+  deleteSectionAPI,
+  editSectionAPI,
+} from "../api/section";
+import CommonDeleteModal from "../components/AntdComponents/Modal";
+
+import {
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Select,
+  Spin,
+  Switch,
+  Table,
+} from "antd";
+import { getCategoriesAPI, getMoviesSelectAPI } from "../api/movies";
+const SECTION_TYPES: {
+  value: SectionType;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+}[] = [
+  {
+    value: "continue_watching",
+    label: "Continue Watching",
+    icon: Clock,
+    description: "User's in-progress content",
+  },
+  {
+    value: "trending_now",
+    label: "Trending Now",
+    icon: TrendingUp,
+    description: "Popular content based on views",
+  },
+  {
+    value: "latest_releases",
+    label: "Latest Releases",
+    icon: Star,
+    description: "Recently added content",
+  },
+  {
+    value: "top_rated",
+    label: "Top Rated",
+    icon: Star,
+    description: "Highest rated content",
+  },
+  {
+    value: "recommended",
+    label: "Recommended",
+    icon: Heart,
+    description: "Personalized suggestions",
+  },
+  {
+    value: "category_based",
+    label: "Category Based",
+    icon: FolderOpen,
+    description: "Content from specific category",
+  },
+  {
+    value: "custom_collection",
+    label: "Custom Collection",
+    icon: List,
+    description: "Manually selected content",
+  },
 ];
 
 const CONTENT_SOURCES: { value: ContentSource; label: string }[] = [
@@ -54,13 +167,22 @@ const TAB_OPTIONS: { value: AppTab; label: string }[] = [
 ];
 
 function SectionIcon({ type }: { type: SectionType }) {
-  const section = SECTION_TYPES.find(s => s.value === type);
+  const section = SECTION_TYPES.find((s) => s.value === type);
   const Icon = section?.icon || List;
   return <Icon className="h-4 w-4" />;
 }
 
-function SortableSectionCard({ section, onEdit, onDelete }: { section: HomeSection; onEdit: (s: HomeSection) => void; onDelete: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: section.id });
+function SortableSectionCard({
+  section,
+  onEdit,
+  onDelete,
+}: {
+  section: HomeSection;
+  onEdit: (s: HomeSection) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: section.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -94,26 +216,42 @@ function SortableSectionCard({ section, onEdit, onDelete }: { section: HomeSecti
           <div className="flex items-center gap-2">
             <h3 className="font-medium truncate">{section.title}</h3>
             {section.is_active ? (
-              <Badge className="bg-green-500/10 text-green-600 text-xs"><Eye className="mr-1 h-3 w-3" />Active</Badge>
+              <Badge className="bg-green-500/10 text-green-600 text-xs">
+                <Eye className="mr-1 h-3 w-3" />
+                Active
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs"><EyeOff className="mr-1 h-3 w-3" />Inactive</Badge>
+              <Badge variant="secondary" className="text-xs">
+                <EyeOff className="mr-1 h-3 w-3" />
+                Inactive
+              </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">{section.section_type.replace(/_/g, " ")}</Badge>
+            <Badge variant="outline" className="text-xs">
+              {section.section_type.replace(/_/g, " ")}
+            </Badge>
             <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-muted-foreground capitalize">{section.content_type}</span>
+            <span className="text-xs text-muted-foreground capitalize">
+              {section.content_type}
+            </span>
             <span className="text-xs text-muted-foreground">•</span>
-            <Badge variant="outline" className="text-[10px]">{getDisplayStyleLabel()}</Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {getDisplayStyleLabel()}
+            </Badge>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-1 max-w-32">
           {section.visible_tabs.slice(0, 3).map((tab) => (
-            <Badge key={tab} variant="secondary" className="text-[10px]">{tab}</Badge>
+            <Badge key={tab} variant="secondary" className="text-[10px]">
+              {tab}
+            </Badge>
           ))}
           {section.visible_tabs.length > 3 && (
-            <Badge variant="secondary" className="text-[10px]">+{section.visible_tabs.length - 3}</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              +{section.visible_tabs.length - 3}
+            </Badge>
           )}
         </div>
 
@@ -130,11 +268,15 @@ function SortableSectionCard({ section, onEdit, onDelete }: { section: HomeSecti
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Section?</AlertDialogTitle>
-                <AlertDialogDescription>This will remove "{section.title}" from all tabs.</AlertDialogDescription>
+                <AlertDialogDescription>
+                  This will remove "{section.title}" from all tabs.
+                </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(section.id)}>Delete</AlertDialogAction>
+                <AlertDialogAction onClick={() => onDelete(section.id)}>
+                  Delete
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -152,7 +294,8 @@ interface SelectedContent {
 }
 
 export default function HomeSections() {
-  const { sections,createSection, updateSection, deleteSection, reorderSections } = useHomeSections();
+  const { sections, createSection, updateSection, reorderSections } =
+    useHomeSections();
   const { categories } = useCategories();
   const { movies } = useMoviesDB();
   const { webSeries } = useWebSeriesDB();
@@ -160,11 +303,17 @@ export default function HomeSections() {
   const { shortMovies } = useShortMoviesDB();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState<HomeSection | null>(null);
+  const [editingSection, setEditingSection] = useState<HomeSection | null>(
+    null,
+  );
   const [selectedContent, setSelectedContent] = useState<SelectedContent[]>([]);
   const [contentSearchType, setContentSearchType] = useState<string>("movies");
-  
-  const { items: sectionItems, addItem, removeItem } = useSectionItems(editingSection?.id || null);
+
+  const {
+    items: sectionItems,
+    addItem,
+    removeItem,
+  } = useSectionItems(editingSection?.id || null);
 
   const [formData, setFormData] = useState<SectionFormData>({
     title: "",
@@ -184,13 +333,21 @@ export default function HomeSections() {
   // Load existing section items when editing
   useEffect(() => {
     if (editingSection && sectionItems.length > 0) {
-      const loadedContent: SelectedContent[] = sectionItems.map(item => {
+      const loadedContent: SelectedContent[] = sectionItems.map((item) => {
         let content: any = null;
         switch (item.content_type) {
-          case "movies": content = movies.find(m => m.id === item.content_id); break;
-          case "web_series": content = webSeries.find(w => w.id === item.content_id); break;
-          case "tv_shows": content = tvShows.find(t => t.id === item.content_id); break;
-          case "short_movies": content = shortMovies.find(s => s.id === item.content_id); break;
+          case "movies":
+            content = movies.find((m) => m.id === item.content_id);
+            break;
+          case "web_series":
+            content = webSeries.find((w) => w.id === item.content_id);
+            break;
+          case "tv_shows":
+            content = tvShows.find((t) => t.id === item.content_id);
+            break;
+          case "short_movies":
+            content = shortMovies.find((s) => s.id === item.content_id);
+            break;
         }
         return {
           id: item.content_id,
@@ -205,7 +362,9 @@ export default function HomeSections() {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -217,8 +376,6 @@ export default function HomeSections() {
       reorderSections.mutate(newOrder.map((s) => s.id));
     }
   };
-
-
 
   const openEditDialog = (section: HomeSection) => {
     setEditingSection(section);
@@ -259,7 +416,10 @@ export default function HomeSections() {
     }
 
     // Save selected content for admin_selected source
-    if (formData.content_source === "admin_selected" && selectedContent.length > 0) {
+    if (
+      formData.content_source === "admin_selected" &&
+      selectedContent.length > 0
+    ) {
       // Remove existing items if editing
       if (editingSection) {
         for (const item of sectionItems) {
@@ -291,256 +451,261 @@ export default function HomeSections() {
 
   const getContentList = () => {
     switch (contentSearchType) {
-      case "movies": return movies.map(m => ({ ...m, content_type: "movies" }));
-      case "web_series": return webSeries.map(w => ({ ...w, content_type: "web_series" }));
-      case "tv_shows": return tvShows.map(t => ({ ...t, content_type: "tv_shows" }));
-      case "short_movies": return shortMovies.map(s => ({ ...s, content_type: "short_movies" }));
-      default: return [];
+      case "movies":
+        return movies.map((m) => ({ ...m, content_type: "movies" }));
+      case "web_series":
+        return webSeries.map((w) => ({ ...w, content_type: "web_series" }));
+      case "tv_shows":
+        return tvShows.map((t) => ({ ...t, content_type: "tv_shows" }));
+      case "short_movies":
+        return shortMovies.map((s) => ({ ...s, content_type: "short_movies" }));
+      default:
+        return [];
     }
   };
 
   const addContentToSelection = (item: any) => {
-    if (!selectedContent.find(c => c.id === item.id)) {
-      setSelectedContent([...selectedContent, {
-        id: item.id,
-        title: item.title,
-        content_type: item.content_type,
-        thumbnail_url: item.thumbnail_url,
-      }]);
+    if (!selectedContent.find((c) => c.id === item.id)) {
+      setSelectedContent([
+        ...selectedContent,
+        {
+          id: item.id,
+          title: item.title,
+          content_type: item.content_type,
+          thumbnail_url: item.thumbnail_url,
+        },
+      ]);
     }
   };
 
   const removeContentFromSelection = (id: string) => {
-    setSelectedContent(selectedContent.filter(c => c.id !== id));
+    setSelectedContent(selectedContent.filter((c) => c.id !== id));
   };
 
+  //New section module start from here
+  const { Option } = Select;
+  const [form, setForm] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [sectionData, setSectionData] = useState([]);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editData, setEditData] = useState(false);
 
-    //New section module start from here 
-  const {Option} = Select
-  const [form, setForm] = useState( {});
- const [isLoading,setIsLoading] = useState(false)
-    const [sectionData,setSectionData] = useState([])
-  const [sectionLoading,setSectionLoading] = useState(false)
+  const onEdit = (data) => {
+    setEditData(true);
+    setOpen(true);
+    setDeleteId(data?._id);
+    setForm({
+      title: data?.title || "",
+      contentSource: data?.contentSource || "",
+      categoryId: data?.categoryId || "",
+      movies: data?.sectionData?.movies || [],
+      displayStyle: data?.displayStyle || "",
+      trendingPeriodDays: data?.trendingPeriodDays || "",
+      isActive: data?.isActive || false,
+      isOriginalOnly: data?.isOriginalOnly || false,
+    });
+  };
 
-   const SectionTable = () => {
-   const columns = [
-  {
-    title: "Title",
-    key: "title",
-    align: "center",
-    render: (_, record) => (
-      <div style={{ fontWeight: 500 }}>
-        {record.title || "No Title"}
-      </div>
-    ),
-  },
+  const SectionTable = () => {
+    const columns = [
+      {
+        title: "Title",
+        key: "title",
+        align: "center",
+        render: (_, record) => (
+          <div style={{ fontWeight: 500 }}>{record.title || "No Title"}</div>
+        ),
+      },
 
-  {
-    title: "Section Type",
-    dataIndex: "sectionType",
-    key: "sectionType",
-    align: "center",
-    render: (data) => (
-      <span>{data?.replaceAll("_", " ")}</span>
-    ),
-  },
+      // {
+      //   title: "Section Type",
+      //   dataIndex: "sectionType",
+      //   key: "sectionType",
+      //   align: "center",
+      //   render: (data) => (
+      //     <span>{data?.replaceAll("_", " ")}</span>
+      //   ),
+      // },
 
-  {
-    title: "Content Source",
-    dataIndex: "contentSource",
-    key: "contentSource",
-    align: "center",
-    render: (data) => (
-      <span>{data?.replaceAll("_", " ")}</span>
-    ),
-  },
+      {
+        title: "Content Source",
+        dataIndex: "contentSource",
+        key: "contentSource",
+        align: "center",
+        render: (data) => <span>{data?.replaceAll("_", " ")}</span>,
+      },
 
-  {
-    title: "Category",
-    dataIndex: "categoryId",
-    key: "categoryId",
-    align: "center",
-    render: (data) => (
-      <div style={{ fontWeight: 500 }}>
-        {data?.name || "N/A"}
-      </div>
-    ),
-  },
+      {
+        title: "Category",
+        dataIndex: "categoryId",
+        key: "categoryId",
+        align: "center",
+        render: (data) => (
+          <div style={{ fontWeight: 500 }}>{data?.name || "N/A"}</div>
+        ),
+      },
 
-  {
-    title: "Display Style",
-    dataIndex: "displayStyle",
-    key: "displayStyle",
-    align: "center",
-    render: (data) => (
-      <span>{data?.replaceAll("_", " ")}</span>
-    ),
-  },
+      {
+        title: "Display Style",
+        dataIndex: "displayStyle",
+        key: "displayStyle",
+        align: "center",
+        render: (data) => <span>{data?.replaceAll("_", " ")}</span>,
+      },
 
-  {
-    title: "Item Limit",
-    dataIndex: "itemLimit",
-    key: "itemLimit",
-    align: "center",
-  },
+      ,
+      {
+        title: "Active",
+        dataIndex: "isActive",
+        key: "isActive",
+        align: "center",
+        render: (val) => (
+          <span style={{ color: val ? "green" : "red" }}>
+            {val ? "Active" : "Inactive"}
+          </span>
+        ),
+      },
 
-  {
-    title: "Tabs",
-    dataIndex: "visibleTabs",
-    key: "visibleTabs",
-    align: "center",
-    render: (tabs) => (
-      <div>
-        {tabs?.length
-          ? tabs.map((tab) => tab.replaceAll("_", " ")).join(", ")
-          : "N/A"}
-      </div>
-    ),
-  },
+      {
+        title: "Original Only",
+        dataIndex: "isOriginalOnly",
+        key: "isOriginalOnly",
+        align: "center",
+        render: (val) => (val ? "Yes" : "No"),
+      },
 
-  {
-    title: "Order",
-    dataIndex: "displayOrder",
-    key: "displayOrder",
-    align: "center",
-  },
+      {
+        title: "Trending Days",
+        dataIndex: "trendingPeriodDays",
+        key: "trendingPeriodDays",
+        align: "center",
+      },
 
-  {
-    title: "Active",
-    dataIndex: "isActive",
-    key: "isActive",
-    align: "center",
-    render: (val) => (
-      <span style={{ color: val ? "green" : "red" }}>
-        {val ? "Active" : "Inactive"}
-      </span>
-    ),
-  },
+      {
+        title: "Actions",
+        key: "actions",
+        width: 100,
+        render: (_, item) => (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
 
-  {
-    title: "Original Only",
-    dataIndex: "isOriginalOnly",
-    key: "isOriginalOnly",
-    align: "center",
-    render: (val) => (val ? "Yes" : "No"),
-  },
-
-  {
-    title: "Trending Days",
-    dataIndex: "trendingPeriodDays",
-    key: "trendingPeriodDays",
-    align: "center",
-  },
-
-  {
-    title: "Sort",
-    key: "sortConfig",
-    align: "center",
-    render: (_, record) => (
-      <span>
-        {record?.sortConfig?.field} ({record?.sortConfig?.order})
-      </span>
-    ),
-  },
-
-  {
-    title: "Actions",
-    key: "actions",
-    width: 100,
-    render: (_, item) => (
-      <div className="flex gap-1">
-        <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-          <Pencil className="h-4 w-4" />
-        </Button>
-
-        <Button
-          // onClick={() => {
-          //   setDeleteId(item?._id);
-          //   setOpen(true);
-          // }}
-          variant="ghost"
-          size="icon"
-          className="text-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    ),
-  },
-];
+            <Button
+              onClick={() => {
+                setDeleteId(item?._id);
+                setDeleteOpen(true);
+              }}
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ];
 
     return (
       <Table
         columns={columns}
         dataSource={sectionData}
         pagination={false}
-        scroll={{x:'max-content'}}
-        
+        scroll={{ x: "max-content" }}
+        loading={isLoading}
       />
     );
   };
 
+  const openCreateDialog = () => {
+    setForm({});
 
-    const openCreateDialog = () => {
-    setForm({})
-      
     setOpen(true);
   };
   const handleChange = (key, value) => {
     setForm({ ...form, [key]: value });
   };
-    const [open,setOpen] = useState(false)
-   
-  const getSectionDataAll = async ()=>{
-    try{
-      setIsLoading(true)
-      const res = await getSectionAPI()
-      if(res?.status===200){
-        setSectionData(res?.data?.data||[])
+  const [open, setOpen] = useState(false);
+
+  const getSectionDataAll = async () => {
+    try {
+      setIsLoading(true);
+      const res = await getSectionAPI();
+      if (res?.status === 200) {
+        setSectionData(res?.data?.data || []);
       }
 
-      console.log(res,'reeees of section here ')
+      console.log(res, "reeees of section here ");
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
     }
-    catch(error){
-      console.log(error)
+  };
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState("");
+  const deleteSection = async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await deleteSectionAPI(deleteId);
+      if (res?.status === 200) {
+        setDeleteOpen(false);
+        getSectionDataAll();
+        message.success("Banner Delete Successfully");
+      }
+    } catch (error) {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
+
+      console.log(error);
+    } finally {
+      setDeleteLoading(false);
     }
-    finally{
-            setIsLoading(false)
+  };
 
+  useEffect(() => {
+    getSectionDataAll();
+  }, []);
+
+  const addSectionBuilder = async () => {
+    if (form?.title === "" || form?.title === undefined) {
+      message.error("Title is required");
+      return;
     }
-  }
-  useEffect(()=>{
-getSectionDataAll()
-  },[])
+    try {
+      setSectionLoading(true);
+      const finaldata = {
+        ...form,
+        sectionData: {
+          movies: [...form?.movies],
+        },
+      };
+      delete finaldata?.movies;
+      const res = editData
+        ? await editSectionAPI(deleteId, finaldata)
+        : await addSectionAPI(finaldata);
+      if (res?.status === 201 || res?.status === 200) {
+        if (editData) {
+          setEditData(false);
+        }
+        getSectionDataAll();
 
+        message.success(res?.data?.message || "Add Section Builder");
+        setForm({});
+        setOpen(false);
+      }
+      console.log(res, "get the response here ");
+    } catch (error) {
+      message.error(error?.data?.message || "Something went wrong ");
+      console.log(error);
+    } finally {
+      setSectionLoading(false);
+    }
+  };
 
-  const addSectionBuilder = async()=>{
-try{
-  if(form?.title===""){
-    message.error("Title is required")
-    return
-  }
-  setSectionLoading(true)
-  const res = await addSectionAPI(form)
-  if(res?.status===201){
-    getSectionDataAll()
-    message.success(res?.data?.message || "Add Section Builder")
-    setForm({})
-    setOpen(false)
-  }
-  console.log(res,'get the response here ')
-}
-catch(error){
-  message.error(error?.data?.message || "Something went wrong ")
-  console.log(error)
-}
-finally{
-    setSectionLoading(false)
-
-}
-  }
-
-   const [categorie, setCategories] = useState([]);
+  const [categorie, setCategories] = useState([]);
   const fetchCategories = async () => {
     try {
       const res = await getCategoriesAPI();
@@ -554,32 +719,50 @@ finally{
     }
   };
 
+  const [allMovies, setAllMovies] = useState([]);
+
+  const getMoviesData = async () => {
+    try {
+      const res = await getMoviesSelectAPI();
+      const Response =
+        res?.data?.data?.map((item) => ({
+          label: item?.movieTitle,
+          value: item?._id,
+        })) || [];
+      setAllMovies(Response);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   useEffect(() => {
+    getMoviesData();
+
     fetchCategories();
   }, []);
 
-
   return (
     <>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Section Builder</h1>
-          <p className="text-sm text-muted-foreground">Build Netflix-style content sections for your home screen</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Section Builder </h1>
+            <p className="text-sm text-muted-foreground">
+              {" "}
+              Total Section {sectionData?.length}
+            </p>
+          </div>
+          <Button onClick={openCreateDialog}>
+            <Plus className="mr-2 h-4 w-4" /> Add Section
+          </Button>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" /> Add Section
-        </Button>
+        <SectionTable />
       </div>
-<SectionTable/>
-      
-    </div>
-     <Modal
+      <Modal
         maskClosable={false}
         title={
           <>
             <div className="text-xl font-bold">
-              Add Section Builder
+              {editData ? "Edit" : "Add"} Section Builder
             </div>
           </>
         }
@@ -588,95 +771,94 @@ finally{
         width={800}
         onCancel={() => setOpen(false)}
       >
- <div className="rounded-2xl p-4 bg-white">
-      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-2xl p-4 bg-white">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Title *</label>
+              <Input
+                placeholder="Enter title"
+                value={form?.title}
+                onChange={(e) => handleChange("title", e.target.value)}
+              />
+            </div>
 
-        {/* Title */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Title *</label>
-          <Input
-            placeholder="Enter title"
-            value={form?.title}
-            onChange={(e) => handleChange("title", e.target.value)}
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Content Source
+              </label>
+              <Select
+                className="w-full"
+                value={form.contentSource}
+                onChange={(value) => handleChange("contentSource", value)}
+              >
+                <Option value="auto">Auto</Option>
+                <Option value="most_viewed">Most Viewed</Option>
+                <Option value="recently_added">Recently Added</Option>
+                <Option value="watch_time_based">Watch Time Based</Option>
+                <Option value="admin_selected">Admin Selected</Option>
+              </Select>
+            </div>
 
-        {/* Section Type */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Section Type</label>
-          <Select
-            className="w-full"
-            value={form?.sectionType}
-            onChange={(value) => handleChange("sectionType", value)}
-          >
-            <Option value="continue_watching">Continue Watching</Option>
-            <Option value="trending_now">Trending Now</Option>
-            <Option value="latest_releases">Latest Releases</Option>
-            <Option value="top_rated">Top Rated</Option>
-            <Option value="recommended">Recommended</Option>
-            <Option value="category_based">Category Based</Option>
-            <Option value="custom_collection">Custom Collection</Option>
-          </Select>
-        </div>
+            {/* Category Id */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
 
-        {/* Content Source */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Content Source</label>
-          <Select
-            className="w-full"
-            value={form.contentSource}
-            onChange={(value) => handleChange("contentSource", value)}
-          >
-            <Option value="auto">Auto</Option>
-            <Option value="most_viewed">Most Viewed</Option>
-            <Option value="recently_added">Recently Added</Option>
-            <Option value="watch_time_based">Watch Time Based</Option>
-            <Option value="admin_selected">Admin Selected</Option>
-          </Select>
-        </div>
+              <Select
+                className="w-full"
+                value={form?.categoryId}
+                onChange={(value) => handleChange("categoryId", value)}
+              >
+                {categorie?.map((item) => {
+                  return (
+                    <>
+                      <Option value={item?.value}>{item?.label}</Option>
+                    </>
+                  );
+                })}
+              </Select>
+            </div>
 
-        {/* Category Id */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-         
-           <Select
-            className="w-full"
-            value={form?.categoryId}
-            onChange={(value) => handleChange("categoryId", value)}
-          >
-            {
-              categorie?.map((item)=>{
-                return (
-                  <>
-                                <Option value={item?.value}>{item?.label}</Option>
+            {/* Display Style */}
+            {form?.contentSource === "admin_selected" && form?.categoryId && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Movies</label>
+                <Select
+                  maxCount={2}
+                  mode="multiple"
+                  showSearch={true}
+                  // placeholder="Select Movies"
+                  className="border p-2 rounded w-full"
+                  value={form?.movies}
+                  // onChange={(e) =>handleChange("movies",e?.target?.value)}
+                  onChange={(e) => setForm({ ...form, movies: e })}
+                  options={allMovies}
+                  filterOption={(input, option) =>
+                    option?.label?.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Display Style
+              </label>
+              <Select
+                className="w-full"
+                value={form.displayStyle}
+                onChange={(value) => handleChange("displayStyle", value)}
+              >
+                <Option value="horizontal_banner">Horizontal Banner</Option>
+                <Option value="vertical_banner">Vertical Banner</Option>
+                <Option value="big_horizontal">Big Horizontal</Option>
+                <Option value="big_vertical">Big Vertical</Option>
+                <Option value="index_horizontal">Index Horizontal</Option>
+                <Option value="index_vertical">Index Vertical</Option>
+              </Select>
+            </div>
 
-                  </>
-                )
-              })
-            }
-            
-          </Select>
-        </div>
-
-        {/* Display Style */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Display Style</label>
-          <Select
-            className="w-full"
-            value={form.displayStyle}
-            onChange={(value) => handleChange("displayStyle", value)}
-          >
-            <Option value="horizontal_banner">Horizontal Banner</Option>
-            <Option value="vertical_banner">Vertical Banner</Option>
-            <Option value="big_horizontal">Big Horizontal</Option>
-            <Option value="big_vertical">Big Vertical</Option>
-            <Option value="index_horizontal">Index Horizontal</Option>
-            <Option value="index_vertical">Index Vertical</Option>
-          </Select>
-        </div>
-
-        {/* Item Limit */}
-        <div>
+            {/* Item Limit */}
+            {/* <div>
           <label className="block text-sm font-medium mb-1">Item Limit</label>
           <InputNumber
             className="w-full"
@@ -685,30 +867,32 @@ finally{
             value={form.itemLimit}
             onChange={(value) => handleChange("itemLimit", value)}
           />
-        </div>
+        </div> */}
 
-        {/* Display Order */}
-        <div>
+            {/* Display Order */}
+            {/* <div>
           <label className="block text-sm font-medium mb-1">Display Order</label>
           <InputNumber
             className="w-full"
             value={form.displayOrder}
             onChange={(value) => handleChange("displayOrder", value)}
           />
-        </div>
+        </div> */}
 
-        {/* Trending Days */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Trending Period (Days)</label>
-          <InputNumber
-            className="w-full"
-            value={form.trendingPeriodDays}
-            onChange={(value) => handleChange("trendingPeriodDays", value)}
-          />
-        </div>
+            {/* Trending Days */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Trending Period (Days)
+              </label>
+              <InputNumber
+                className="w-full"
+                value={form.trendingPeriodDays}
+                onChange={(value) => handleChange("trendingPeriodDays", value)}
+              />
+            </div>
 
-        {/* Visible Tabs */}
-        <div className="col-span-2">
+            {/* Visible Tabs */}
+            {/* <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Visible Tabs</label>
           <Select
             mode="multiple"
@@ -723,45 +907,50 @@ finally{
             <Option value="web_series">Web Series</Option>
             <Option value="short_movies">Short Movies</Option>
           </Select>
-        </div>
+        </div> */}
 
-        {/* Switches */}
-        <div className="flex gap-6 col-span-2">
-          <div>
-            <label className="block text-sm mb-1">Active</label>
-            <Switch
-              checked={form.isActive}
-              onChange={(val) => handleChange("isActive", val)}
-            />
+            {/* Switches */}
+            <div className="flex gap-6 col-span-2">
+              <div>
+                <label className="block text-sm mb-1">Active</label>
+                <Switch
+                  checked={form.isActive}
+                  onChange={(val) => handleChange("isActive", val)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Original Only</label>
+                <Switch
+                  checked={form.isOriginalOnly}
+                  onChange={(val) => handleChange("isOriginalOnly", val)}
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm mb-1">Original Only</label>
-            <Switch
-              checked={form.isOriginalOnly}
-              onChange={(val) => handleChange("isOriginalOnly", val)}
-            />
+          {/* Actions */}
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              onClick={() => setForm({})}
+              className="border px-4 py-2 rounded"
+            >
+              Cancel
+            </button>
+
+            <Button onClick={() => addSectionBuilder()}>
+              {sectionLoading ? <Spin /> : <>{editData ? "Edit" : "Add"}</>}
+            </Button>
           </div>
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-2 mt-6">
-        <button
-          onClick={() => setForm({})}
-          className="border px-4 py-2 rounded"
-        >
-          Cancel
-        </button>
-
-        <Button  onClick={() => addSectionBuilder()}>
-          Submit
-        </Button>
-      </div>
-    </div>
-
-
       </Modal>
-      </>
+
+      <CommonDeleteModal
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={deleteSection}
+        loading={deleteLoading}
+      />
+    </>
   );
 }
