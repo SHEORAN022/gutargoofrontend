@@ -1,15 +1,18 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Hls from "hls.js";
 import "./Movies.css";
-import { Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Table, Tag, Switch, Space, message } from "antd";
+import { Table, Tag, Switch, Space, message, Select } from "antd";
+import CommonDeleteModal from "../components/AntdComponents/Modal";
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || "https://gutargoobackend-cem4.onrender.com/api",
+  baseURL:
+    import.meta.env.VITE_BACKEND_URL ||
+    "https://gutargoobackend-cem4.onrender.com/api",
   timeout: 300000,
 });
 
@@ -104,9 +107,13 @@ const VideoPlayer = ({ url, type }) => {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const Movies = () => {
+  const { Option } = Select;
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [activeTab, setActiveTab] = useState("basic");
   const [loading, setLoading] = useState(false);
-  const [listingCallingLoading,setListingCallingLoading] = useState(false)
+  const [listingCallingLoading, setListingCallingLoading] = useState(false);
   const [movies, setMovies] = useState([]);
   const [editingMovie, setEditingMovie] = useState(null);
   const [showList, setShowList] = useState(false);
@@ -128,7 +135,7 @@ const Movies = () => {
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
   const [videoType, setVideoType] = useState("auto");
- const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [limit, setLimit] = useState(50);
   // Crew / cast image file maps: { "director_0": File, "cast_2": File, ... }
@@ -141,7 +148,7 @@ const Movies = () => {
     fullStoryline: "",
     genres: [],
     tags: [],
-    language: "",
+    lang: "",
     selectedLanguage: "",
     duration: "",
     ageRating: "",
@@ -208,6 +215,20 @@ const Movies = () => {
     "War",
     "Western",
   ];
+  // const languageOptions = [
+  //   "English",
+  //   "Hindi",
+  //   "Spanish",
+  //   "French",
+  //   "German",
+  //   "Chinese",
+  //   "Japanese",
+  //   "Korean",
+  //   "Tamil",
+  //   "Telugu",
+  //   "Malayalam",
+  //   "Kannada",
+  // ];
   const languageOptions = [
     "English",
     "Hindi",
@@ -221,7 +242,25 @@ const Movies = () => {
     "Telugu",
     "Malayalam",
     "Kannada",
-  ];
+    "Bengali",
+    "Marathi",
+    "Punjabi",
+    "Gujarati",
+    "Odia",
+    "Assamese",
+    "Urdu",
+    "Nepali",
+    "Arabic",
+    "Russian",
+    "Portuguese",
+    "Italian",
+    "Dutch",
+    "Turkish",
+    "Vietnamese",
+    "Thai",
+    "Indonesian",
+    "Polish",
+  ]?.map((item) => ({ value: item === "Hindi" ? "Hindi" : item, label: item }));
   const ageRatingOptions = ["U", "UA", "A", "R", "PG-13", "PG", "G", "NC-17"];
 
   const CREW_ROLES_CONFIG = [
@@ -233,24 +272,23 @@ const Movies = () => {
     { role: "Editor", field: "editor", icon: "" },
   ];
 
-
   const fetchMovies = async () => {
     try {
-      setListingCallingLoading(true)
-      const response = await API.get(`/movies?limit=${limit}&page=${currentPage}?`);
+      setListingCallingLoading(true);
+      const response = await API.get(
+        `/movies?limit=${limit}&page=${currentPage}?`,
+      );
       setMovies(response.data.data || []);
     } catch {
       toast.error("Failed to fetch movies");
-    }
-    finally{
-      setListingCallingLoading(false)
+    } finally {
+      setListingCallingLoading(false);
     }
   };
 
-
-    useEffect(() => {
+  useEffect(() => {
     fetchMovies();
-  }, [currentPage,limit]);
+  }, [currentPage, limit]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -409,7 +447,9 @@ const Movies = () => {
         // toast.success(
         //   `Movie ${response.data.data.publishStatus ? "Published" : "Unpublished"} successfully!`,
         // );
-        message.success( `Movie ${response.data.data.publishStatus ? "Published" : "Unpublished"} successfully!`)
+        message.success(
+          `Movie ${response.data.data.publishStatus ? "Published" : "Unpublished"} successfully!`,
+        );
         fetchMovies();
       }
     } catch {
@@ -423,7 +463,7 @@ const Movies = () => {
     if (
       !formData.movieTitle ||
       !formData.description ||
-      !formData.language ||
+      !formData.lang ||
       !formData.duration ||
       !formData.ageRating ||
       !formData.releaseYear
@@ -536,7 +576,7 @@ const Movies = () => {
       fullStoryline: "",
       genres: [],
       tags: [],
-      language: "",
+      lang: "",
       selectedLanguage: "",
       duration: "",
       ageRating: "",
@@ -592,22 +632,42 @@ const Movies = () => {
     setCrewImageFiles({});
   };
 
-  const deleteMovie = async (id) => {
-    if (
-      window.confirm(
-        "Delete this movie? This will also delete the video from Bunny CDN.",
-      )
-    ) {
-      try {
-        await API.delete(`/movies/${id}`);
-        toast.success("Movie deleted from database and Bunny CDN");
+  // const deleteMovie = async (id) => {
+  //   if (
+  //     window.confirm(
+  //       "Delete this movie? This will also delete the video from Bunny CDN.",
+  //     )
+  //   ) {
+  //     try {
+  //       await API.delete(`/movies/${id}`);
+  //       toast.success("Movie deleted from database and Bunny CDN");
+  //       await fetchMovies();
+  //     } catch {
+  //       toast.error("Failed to delete");
+  //     }
+  //   }
+  // };
+  const [movieDeleteId, setMovieDeleteId] = useState("");
+
+  const deleteMovie = async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await API.delete(`/movies/${movieDeleteId}`);
+      if (res?.status === 200) {
+        setDeleteOpen(false);
         await fetchMovies();
-      } catch {
-        toast.error("Failed to delete");
+        message.success("Banner Delete Successfully");
       }
+    } catch (error) {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
+
+      console.log(error);
+    } finally {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
     }
   };
-
   const editMovie = (movie) => {
     setEditingMovie(movie);
     setFormData({
@@ -617,7 +677,7 @@ const Movies = () => {
       fullStoryline: movie.fullStoryline || "",
       genres: movie.genres || [],
       tags: movie.tags || [],
-      language: movie.language || "",
+      lang: movie.lang || "",
       selectedLanguage: movie.selectedLanguage || "",
       duration: movie.duration || "",
       ageRating: movie.ageRating || "",
@@ -699,246 +759,243 @@ const Movies = () => {
     return matchesSearch && matchesStatus;
   });
 
-
   // paste your JSON here
-
 
   const [totalPages, setTotalPages] = useState(1);
 
-// const MovieTable = () => {
- 
+  // const MovieTable = () => {
 
-//   // 🔥 Fetch movies from backend
-//   const fetchMovies = async (page = 1) => {
-//     try {
-//       const res = await    (
-//         `/api/movies?page=${page}&limit=${limit}`
-//       );
-//       const data = await res.json();
+  //   // 🔥 Fetch movies from backend
+  //   const fetchMovies = async (page = 1) => {
+  //     try {
+  //       const res = await    (
+  //         `/api/movies?page=${page}&limit=${limit}`
+  //       );
+  //       const data = await res.json();
 
-//       setMovies(data.movies);
-//       setTotalPages(data.totalPages);
-//       setCurrentPage(data.currentPage);
-//     } catch (err) {
-//       console.error("Error fetching movies:", err);
-//     }
-//   };
+  //       setMovies(data.movies);
+  //       setTotalPages(data.totalPages);
+  //       setCurrentPage(data.currentPage);
+  //     } catch (err) {
+  //       console.error("Error fetching movies:", err);
+  //     }
+  //   };
 
-//   useEffect(() => {
-//     fetchMovies(currentPage);
-//   }, [currentPage]);
+  //   useEffect(() => {
+  //     fetchMovies(currentPage);
+  //   }, [currentPage]);
 
-//   return (
-//     <div className="p-4 w-full">
-//       {/* TABLE */}
-//       <div className="overflow-x-auto">
-//         <table className="min-w-full border border-gray-200 rounded-xl overflow-hidden">
-//           <thead className="bg-gray-100">
-//             <tr>
-//               <th className="p-3 text-left">Poster</th>
-//               <th className="p-3 text-left">Title</th>
-//               <th className="p-3 text-left">Genre</th>
-//               <th className="p-3 text-left">Language</th>
-//               <th className="p-3 text-left">Year</th>
-//               <th className="p-3 text-left">Rating</th>
-//               <th className="p-3 text-left">Status</th>
-//               <th className="p-3 text-left">Action</th>
-//             </tr>
-//           </thead>
+  //   return (
+  //     <div className="p-4 w-full">
+  //       {/* TABLE */}
+  //       <div className="overflow-x-auto">
+  //         <table className="min-w-full border border-gray-200 rounded-xl overflow-hidden">
+  //           <thead className="bg-gray-100">
+  //             <tr>
+  //               <th className="p-3 text-left">Poster</th>
+  //               <th className="p-3 text-left">Title</th>
+  //               <th className="p-3 text-left">Genre</th>
+  //               <th className="p-3 text-left">Language</th>
+  //               <th className="p-3 text-left">Year</th>
+  //               <th className="p-3 text-left">Rating</th>
+  //               <th className="p-3 text-left">Status</th>
+  //               <th className="p-3 text-left">Action</th>
+  //             </tr>
+  //           </thead>
 
-//           <tbody>
-//             {movies.map((movie) => (
-//               <tr key={movie._id} className="border-t hover:bg-gray-50">
-//                 <td className="p-3">
-//                   <img
-//                     src={movie.verticalPoster?.url}
-//                     alt={movie.movieTitle}
-//                     className="w-12 h-12 object-cover rounded-[8px]"
-//                   />
-//                 </td>
+  //           <tbody>
+  //             {movies.map((movie) => (
+  //               <tr key={movie._id} className="border-t hover:bg-gray-50">
+  //                 <td className="p-3">
+  //                   <img
+  //                     src={movie.verticalPoster?.url}
+  //                     alt={movie.movieTitle}
+  //                     className="w-12 h-12 object-cover rounded-[8px]"
+  //                   />
+  //                 </td>
 
-//                 <td className="p-3 font-semibold">
-//                   {movie.movieTitle}
-//                 </td>
+  //                 <td className="p-3 font-semibold">
+  //                   {movie.movieTitle}
+  //                 </td>
 
-//                 <td className="p-3">
-//                   {movie.genres?.join(", ")}
-//                 </td>
+  //                 <td className="p-3">
+  //                   {movie.genres?.join(", ")}
+  //                 </td>
 
-//                 <td className="p-3">{movie.language}</td>
+  //                 <td className="p-3">{movie.language}</td>
 
-//                 <td className="p-3">{movie.releaseYear}</td>
+  //                 <td className="p-3">{movie.releaseYear}</td>
 
-//                 <td className="p-3">⭐ {movie.imdbRating}</td>
+  //                 <td className="p-3">⭐ {movie.imdbRating}</td>
 
-//                 {/* STATUS TOGGLE */}
-//                 <td className="p-3">
-//                   <div className="flex items-center gap-3">
-//                     <button
-//                       onClick={() =>
-//                         togglePublishStatus(movie._id)
-//                       }
-//                       className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
-//                         movie.publishStatus
-//                           ? "bg-green-500"
-//                           : "bg-gray-300"
-//                       }`}
-//                     >
-//                       <span
-//                         className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-//                           movie.publishStatus
-//                             ? "translate-x-6"
-//                             : "translate-x-0"
-//                         }`}
-//                       />
-//                     </button>
+  //                 {/* STATUS TOGGLE */}
+  //                 <td className="p-3">
+  //                   <div className="flex items-center gap-3">
+  //                     <button
+  //                       onClick={() =>
+  //                         togglePublishStatus(movie._id)
+  //                       }
+  //                       className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+  //                         movie.publishStatus
+  //                           ? "bg-green-500"
+  //                           : "bg-gray-300"
+  //                       }`}
+  //                     >
+  //                       <span
+  //                         className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+  //                           movie.publishStatus
+  //                             ? "translate-x-6"
+  //                             : "translate-x-0"
+  //                         }`}
+  //                       />
+  //                     </button>
 
-//                     <span
-//                       className={`text-sm font-medium ${
-//                         movie.publishStatus
-//                           ? "text-green-600"
-//                           : "text-yellow-600"
-//                       }`}
-//                     >
-//                       {movie.publishStatus
-//                         ? "Published"
-//                         : "Draft"}
-//                     </span>
-//                   </div>
-//                 </td>
+  //                     <span
+  //                       className={`text-sm font-medium ${
+  //                         movie.publishStatus
+  //                           ? "text-green-600"
+  //                           : "text-yellow-600"
+  //                       }`}
+  //                     >
+  //                       {movie.publishStatus
+  //                         ? "Published"
+  //                         : "Draft"}
+  //                     </span>
+  //                   </div>
+  //                 </td>
 
-//                 {/* ACTIONS */}
-//                 <td className="p-3">
-//                   <div className="flex gap-3 items-center">
-//                     <div
-//                       onClick={() => editMovie(movie)}
-//                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
-//                     >
-//                       Edit
-//                     </div>
-//                     <div
-//                       onClick={() =>
-//                         deleteMovie(movie._id)
-//                       }
-//                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
-//                     >
-//                       Delete
-//                     </div>
-//                   </div>
-//                 </td>
+  //                 {/* ACTIONS */}
+  //                 <td className="p-3">
+  //                   <div className="flex gap-3 items-center">
+  //                     <div
+  //                       onClick={() => editMovie(movie)}
+  //                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
+  //                     >
+  //                       Edit
+  //                     </div>
+  //                     <div
+  //                       onClick={() =>
+  //                         deleteMovie(movie._id)
+  //                       }
+  //                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
+  //                     >
+  //                       Delete
+  //                     </div>
+  //                   </div>
+  //                 </td>
 
+  const MovieTable = () => {
+    const columns = [
+      {
+        title: "Poster",
 
-
-
-
-const MovieTable = () => {
- 
-
-
-
- 
-
-  const columns = [
-    {
-      title: "Poster",
-      
-      dataIndex: "verticalPoster",
-      key: "poster",
-      render: (poster, record) => (
-        <img
-          src={poster?.url}
-          alt={record.movieTitle}
-          style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 8 }}
-        />
-      ),
-    },
-    {
-      title: "Title",
-      dataIndex: "movieTitle",
-      key: "title",
-    },
-    {
-      title: "Genre",
-      dataIndex: "genres",
-      key: "genres",
-      render: (genres) => genres?.join(", "),
-    },
-    {
-      title: "Language",
-      dataIndex: "language",
-      key: "language",
-    },
-    {
-      title: "Year",
-      dataIndex: "releaseYear",
-      key: "year",
-    },
-    {
-      title: "Rating",
-      dataIndex: "imdbRating",
-      key: "rating",
-      render: (rating) => `⭐ ${rating}`,
-    },
-    {
-      title: "Status",
-      dataIndex: "publishStatus",
-      key: "status",
-      render: (status, record) => (
-        <Space>
-          <Switch
-            checked={status}
-            onChange={() => togglePublishStatus(record._id)}
+        dataIndex: "verticalPoster",
+        key: "poster",
+        render: (poster, record) => (
+          <img
+            src={poster?.url}
+            alt={record.movieTitle}
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 8,
+            }}
           />
-          <Tag color={status ? "green" : "orange"}>
-            {status ? "Published" : "Draft"}
-          </Tag>
-        </Space>
-      ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: (_, record) => (
-        <Space>
-          <button 
-  className="px-5 py-2 rounded-xl  text-black font-medium shadow-md  hover:shadow-md transition-all duration-200"
-          
-          onClick={() => editMovie(record)}>Edit</button>
-          <button   className="px-5 py-2 rounded-xl  text-black font-medium shadow-md  hover:shadow-md transition-all duration-200"
- onClick={() => deleteMovie(record._id)}>
-            Delete
-          </button>
-        </Space>
-      ),
-    },
-  ];
+        ),
+      },
+      {
+        title: "Title",
+        dataIndex: "movieTitle",
+        key: "title",
+      },
+      {
+        title: "Genre",
+        dataIndex: "genres",
+        key: "genres",
+        render: (genres) => genres?.join(", "),
+      },
+      {
+        title: "Language",
+        dataIndex: "lang",
+        key: "lang",
+      },
+      {
+        title: "Year",
+        dataIndex: "releaseYear",
+        key: "year",
+      },
+      {
+        title: "Rating",
+        dataIndex: "imdbRating",
+        key: "rating",
+        render: (rating) => `⭐ ${rating}`,
+      },
+      {
+        title: "Status",
+        dataIndex: "publishStatus",
+        key: "status",
+        render: (status, record) => (
+          <Space>
+            <Switch
+              checked={status}
+              onChange={() => togglePublishStatus(record._id)}
+            />
+            <Tag color={status ? "green" : "orange"}>
+              {status ? "Published" : "Draft"}
+            </Tag>
+          </Space>
+        ),
+      },
+      {
+        title: "Action",
+        key: "action",
+        render: (_, record) => (
+          <Space>
+            <button
+              className="px-5 py-2 rounded-xl  text-black font-medium shadow-md  hover:shadow-md transition-all duration-200"
+              onClick={() => editMovie(record)}
+            >
+              Edit
+            </button>
+            <button
+              className="px-5 py-2 rounded-xl  text-black font-medium shadow-md  hover:shadow-md transition-all duration-200"
+              onClick={() => {
+                setDeleteOpen(true);
+                setMovieDeleteId(record._id);
+              }}
+            >
+              Delete
+            </button>
+          </Space>
+        ),
+      },
+    ];
 
-  return (
-    <div style={{ padding: 16 }}>
-      <Table
-        rowKey="_id"
-        columns={columns}
-        dataSource={filteredMovies}
-        loading={loading}
-        // pagination={{
-        //   current: currentPage,
-        //   pageSize: limit,
-        //   total: total,
-        //   showSizeChanger: true,
-        //   pageSizeOptions: ["10", "25", "50", "100"],
-        // }}
-        // onChange={(pagination) => {
-        //   setCurrentPage(pagination.current);
-        //   setLimit(pagination.pageSize);
-        // }}
-        pagination={false}
-        scroll={{x:'max-content'}}
-      />
-    </div>
-  );
-};
-
-
+    return (
+      <div style={{ padding: 16 }}>
+        <Table
+          rowKey="_id"
+          columns={columns}
+          dataSource={filteredMovies}
+          loading={loading}
+          // pagination={{
+          //   current: currentPage,
+          //   pageSize: limit,
+          //   total: total,
+          //   showSizeChanger: true,
+          //   pageSizeOptions: ["10", "25", "50", "100"],
+          // }}
+          // onChange={(pagination) => {
+          //   setCurrentPage(pagination.current);
+          //   setLimit(pagination.pageSize);
+          // }}
+          pagination={false}
+          scroll={{ x: "max-content" }}
+        />
+      </div>
+    );
+  };
 
   // ─── Movie Card ─────────────────────────────────────────────────────────
   // const MovieCard = ({ movie }) => {
@@ -1198,7 +1255,7 @@ const MovieTable = () => {
   // ─── Crew name helper ────────────────────────────────────────────────────
   const getCrewName = (member) =>
     typeof member === "string" ? member : member?.name || "";
-if (listingCallingLoading) {
+  if (listingCallingLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1209,14 +1266,26 @@ if (listingCallingLoading) {
   return (
     // <AdminLayout>
     <>
-   
-    
       <ToastContainer position="top-right" autoClose={5000} />
       <div>
         {!showList && movies.length > 0 && !editingMovie && (
-          <Button  onClick={() => setShowList(true)}>
+          <Button onClick={() => setShowList(true)}>
             View All Movies ({movies.length})
           </Button>
+        )}
+        {editingMovie && (
+          <>
+            <button
+              onClick={() => {
+                resetForm();
+                if (movies.length) setShowList(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
+          </>
         )}
 
         {showList ? (
@@ -1224,9 +1293,8 @@ if (listingCallingLoading) {
             <div className="list-header boxShadowNew  p-2 rounded-[12px] boxShadowNew">
               <h2>All Movies</h2>
               <div className="controls 0 flex gap-2 items-center relative top-1">
-                
                 <input
-                  type="text" 
+                  type="text"
                   className="text-black w-[200px]"
                   placeholder="Search..."
                   value={searchMovie}
@@ -1421,17 +1489,21 @@ if (listingCallingLoading) {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Language *
                           </label>
-                          <select
-                            name="language"
-                            value={formData.language}
-                            onChange={handleChange}
+                          <Select
+                            name="lang"
+                            value={formData.lang}
+                            // onChange={(e)=>console.log(e,';get vaa')}
+                            onChange={(e) =>
+                              setFormData({ ...formData, lang: e })
+                            }
                             className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white focus:ring-2 focus:ring-orange-400 focus:outline-none"
                           >
-                            <option value="">Select language</option>
                             {languageOptions.map((l) => (
-                              <option key={l}>{l}</option>
+                              <option key={l?.value} value={l.value}>
+                                {l?.label}
+                              </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
 
                         <div>
@@ -1784,12 +1856,12 @@ if (listingCallingLoading) {
                         />
                       </div>
                       <p className="upload-status">{uploadStatus}</p>
-                      {uploadProgress === 100 && (
+                      {/* {uploadProgress === 100 && (
                         <p className="transcoding-note">
                           {" "}
                           Upload complete! Video is transcoding on Bunny CDN.
                         </p>
-                      )}
+                      )} */}
                     </div>
                   )}
 
@@ -2219,7 +2291,11 @@ if (listingCallingLoading) {
                   onClick={(e) => handleSubmit(e, true)}
                   disabled={loading}
                 >
-                  {loading ? "Publishing..." : "Publish Now"}
+                  {loading ? (
+                    "Publishing..."
+                  ) : (
+                    <>{editingMovie ? "Published" : "Publish"}</>
+                  )}
                 </button>
               </div>
             </form>
@@ -2308,6 +2384,13 @@ if (listingCallingLoading) {
           </div>
         </div>
       )}
+
+      <CommonDeleteModal
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={deleteMovie}
+        loading={deleteLoading}
+      />
     </>
   );
 };

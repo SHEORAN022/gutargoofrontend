@@ -970,7 +970,8 @@ const finalData = payload?.map((item)=>item?._id)
               <div>
                 <label className="block text-sm font-medium mb-1">Movies</label>
                 <Select
-                  maxCount={2}
+                maxTagCount={2}
+    maxTagPlaceholder={(omittedValues) => `+ ${omittedValues.length} more`}
                   mode="multiple"
                   showSearch={true}
                   // placeholder="Select Movies"

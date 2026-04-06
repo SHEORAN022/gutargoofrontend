@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -12,22 +12,13 @@ import {
   Music,
   Pen,
   Video,
-  Upload,
   Link,
+  ImageOffIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { CameraOutlined, UploadOutlined } from "@ant-design/icons";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +34,9 @@ import { cn } from "@/lib/utils";
 import { useCastCrew } from "@/hooks/useCastCrew";
 import { Person, PersonRole, roleLabels } from "@/lib/castCrewStore";
 import { toast } from "sonner";
+import { Image, Input, message, Modal, Select, Spin, Table, Upload } from "antd";
+import { addCastAndCrewAPI,getCastAndCrewAPI,deleteCastAndCrewAPI } from "../api/castCrew";
+import CommonDeleteModal from "../components/AntdComponents/Modal";
 
 const roleIcons: Record<PersonRole, React.ElementType> = {
   actor: User,
@@ -65,6 +59,16 @@ const roleColors: Record<PersonRole, string> = {
 };
 
 export default function CastCrew() {
+  const CREW_ROLES = [
+    "Director",
+    "Producer",
+    "Writer",
+    "Music Director",
+    "Cinematographer",
+    "Editor",
+    "Other",
+  ];
+  const { Option } = Select;
   const { people, addPerson, updatePerson, deletePerson } = useCastCrew();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<PersonRole | "all">("all");
@@ -72,7 +76,9 @@ export default function CastCrew() {
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageInputType, setImageInputType] = useState<"upload" | "url">("upload");
+  const [imageInputType, setImageInputType] = useState<"upload" | "url">(
+    "upload",
+  );
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -80,11 +86,6 @@ export default function CastCrew() {
   const [formBio, setFormBio] = useState("");
   const [formRoles, setFormRoles] = useState<PersonRole[]>([]);
 
-  const filteredPeople = people.filter((person) => {
-    const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = activeTab === "all" || person.roles.includes(activeTab as PersonRole);
-    return matchesSearch && matchesRole;
-  });
 
   const resetForm = () => {
     setFormName("");
@@ -176,17 +177,303 @@ export default function CastCrew() {
     total: people.length,
     actors: people.filter((p) => p.roles.includes("actor")).length,
     directors: people.filter((p) => p.roles.includes("director")).length,
-    crew: people.filter((p) => 
-      p.roles.some((r) => ["producer", "writer", "music_director", "cinematographer", "editor"].includes(r))
+    crew: people.filter((p) =>
+      p.roles.some((r) =>
+        [
+          "producer",
+          "writer",
+          "music_director",
+          "cinematographer",
+          "editor",
+        ].includes(r),
+      ),
     ).length,
   };
 
+  //start main cast and crew
+  const [imageProcess, setImageProcess] = useState({});
+
+  const [formData, setFormData] = useState({
+    personName: "",
+    role: "",
+    characterName: "",
+    profileImage: null,
+  });
+  const [commonBoolean, setCommonBoolean] = useState({
+    loading: false,
+    imageLoading: false,
+  });
+
+  const getBase64 = (img, callback) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => callback(reader.result));
+    reader.readAsDataURL(img);
+  };
+  const CustomRequestApi = async (info) => {
+    setCommonBoolean((prev) => ({ ...prev, imageLoading: true }));
+
+    try {
+      if (info?.file?.status === "uploading") {
+        getBase64(info?.file?.originFileObj, (imageUrl) => {
+          setImageProcess((prev) => ({
+            ...prev,
+            showImage: imageUrl,
+          }));
+        });
+        return;
+      }
+
+      // ✅ store FILE directly
+      setFormData((prev) => ({
+        ...prev,
+        profileImage: info.file.originFileObj,
+      }));
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setCommonBoolean((prev) => ({ ...prev, imageLoading: false }));
+    }
+  };
+  const customRequest = async ({ file, onSuccess, onError }) => {
+    try {
+      onSuccess();
+    } catch (error) {
+      onError("Upload failed");
+    }
+  };
+  const [previewLogo, setPreviewLogo] = useState(null);
+
+  const handleFileChange = (e) => {
+    const { name, files } = e.target;
+    if (!files?.[0]) return;
+    const file = files[0];
+    // setForm({ ...form, [name]: file });
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: file,
+    }));
+
+    const makePreview = (setter) => {
+      const reader = new FileReader();
+      reader.onloadend = () => setter(reader.result);
+      reader.readAsDataURL(file);
+    };
+
+    if (name === "profileImage") makePreview(setPreviewLogo);
+  };
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const [submitLoading, setSubmitLoading] = useState(false);
+   const [crewCast, setCrewCaset] = useState([]);
+   const [isLoading,setIsLoading] = useState(false)
+  const [open,setOpen] = useState(false)
+  const [deleteLoading,setDeleteLoading] = useState(false)
+  const [deleteId,setDeleteId] = useState("")
+    const CastCrewTable = () => {
+    const columns = [
+      {
+        title: "Profile Image",
+        dataIndex: "profileImage",
+        key: "profileImage",
+        render: (img, banner) =>
+          banner.profileImage?.url ? (
+            <img
+              src={banner.profileImage?.url}
+              alt=""
+              className="h-12 w-20 rounded object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-20 items-center justify-center rounded bg-muted">
+              <ImageOffIcon className="h-5 w-5 text-muted-foreground" />
+            </div>
+          ),
+      },
+    
+      {
+        title: "Person Name",
+        key: "personName",
+        align: "center",
+        render: (_, record) => (
+          <div>
+            <div style={{ fontWeight: 500 }}>{record.title || "Person Name"}</div>
+          </div>
+        ),
+      },
+      {
+        title: "Role",
+        dataIndex: "role",
+        key: "role",
+        align: "center",
+        render: (_,data) => {
+          return (
+            <>
+              <div style={{ fontWeight: 500 }}>{data?.role}</div>
+            </>
+          );
+        },
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        width: 100,
+        render: (_, banner) => (
+          <div className="flex gap-1">
+            {/* <Button variant="ghost" size="icon"> */}
+              {/* <Pencil className="h-4 w-4" /> */}
+            {/* </Button> */}
+
+            <Button
+              onClick={() => {
+                setDeleteId(banner?._id);
+                setOpen(true);
+              }}
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ];
+
+    return (
+      <Table
+        columns={columns}
+        dataSource={crewCast}
+        rowKey="_id" // or "id" depending on your data
+        pagination={false}
+        loading={isLoading}
+        scroll={{x:'max-content'}}
+
+      />
+    );
+  };
+   const getCastCrewData = async () => {
+    try {
+      setIsLoading(true)
+      const res = await getCastAndCrewAPI();
+      if(res?.status===201){
+        const Response = res?.data?.data  || []
+        setCrewCaset(Response)
+      }
+     console.log(res,'get the response ')
+    } catch (error) {
+      console.log(error);
+    }
+    finally{
+            setIsLoading(false)
+
+    }
+  };
+    const deleteCastCrew = async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await deleteCastAndCrewAPI(deleteId);
+      if (res?.status === 200) {
+        setOpen(false);
+        getCastCrewData();
+        message.success("Banner Delete Successfully");
+      }
+    } catch (error) {
+      setDeleteLoading(false);
+      setOpen(false);
+
+      console.log(error);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+
+// const filteredPeople = people.filter((person) => {
+//   const matchesSearch = person?.personName
+//     ?.toLowerCase()
+//     ?.includes((searchQuery || "").toLowerCase());
+
+//   const matchesRole =
+//     activeTab === "all" || person.role === activeTab;
+
+//   return matchesSearch && matchesRole;
+// });
+ 
+useEffect(()=>{
+  getCastCrewData()
+},[])
+
+  const finalAdd = async () => {
+    if (
+      formData?.personName === "" ||
+      formData?.personName === undefined ||
+      formData?.role === "" ||
+      formData?.role === undefined
+    ) {
+      message.error("Person Name and role is required");
+      return;
+    }
+
+    try {
+      setSubmitLoading(true);
+      const newFormData = new FormData();
+
+      Object.keys(formData).forEach((key) => {
+        const value = formData[key];
+
+        // if (!value) return;
+
+        if (value === undefined || value === null) return;
+
+        if (["profileImage"].includes(key)) {
+          if (value instanceof File) {
+            newFormData.append(key, value);
+          } else if (value?.url) {
+            newFormData.append(`existing_${key}`, value.url);
+          }
+        } else if (Array.isArray(value)) {
+          if (value.length > 0) {
+            newFormData.append(key, JSON.stringify(value));
+          }
+        } else {
+          newFormData.append(key, value);
+        }
+      });
+
+      let res = await addCastAndCrewAPI(newFormData)
+
+      // 🔥 EDIT CASE
+
+      if (res?.status === 200 || res?.status === 201) {
+        setFormData({});
+        setPreviewLogo(null);
+
+        setIsAddDialogOpen(false);
+
+        message.success("Banner Added Successfully");
+      }
+
+      console.log(res);
+    } catch (error) {
+      console.log(error);
+      message.error(error?.message)
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen animate-fade-in">
+    <>
+     <div className="min-h-screen animate-fade-in">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Cast & Crew</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            Cast & Crew
+          </h1>
           <p className="text-sm text-muted-foreground">
             Manage all actors, directors, and crew members
           </p>
@@ -198,11 +485,15 @@ export default function CastCrew() {
       </div>
 
       {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Total People", value: stats.total, color: "text-primary" },
           { label: "Actors", value: stats.actors, color: "text-blue-500" },
-          { label: "Directors", value: stats.directors, color: "text-purple-500" },
+          {
+            label: "Directors",
+            value: stats.directors,
+            color: "text-purple-500",
+          },
           { label: "Crew Members", value: stats.crew, color: "text-green-500" },
         ].map((stat) => (
           <div key={stat.label} className="glass-card rounded-xl p-4">
@@ -210,34 +501,38 @@ export default function CastCrew() {
             <p className={cn("text-2xl font-bold", stat.color)}>{stat.value}</p>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Search & Filters */}
-      <div className="mb-6 glass-card rounded-xl p-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      {/* <div className="mb-6 glass-card rounded-xl p-4">
+        <div className="flex  gap-4 ">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 pl-10"
+              className="h-10 !w-50 "
             />
           </div>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PersonRole | "all")}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as PersonRole | "all")}
+          >
             <TabsList className="bg-secondary/50">
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="actor">Actors</TabsTrigger>
-              <TabsTrigger value="director">Directors</TabsTrigger>
-              <TabsTrigger value="producer">Producers</TabsTrigger>
-              <TabsTrigger value="writer">Writers</TabsTrigger>
+              <TabsTrigger value="Director">Directors</TabsTrigger>
+              <TabsTrigger value="Producer">Producers</TabsTrigger>
+              <TabsTrigger value="Writer">Writers</TabsTrigger>
+              <TabsTrigger value="Editor">Cinematographer</TabsTrigger>
+              <TabsTrigger value="Other">Other</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
-      </div>
+      </div> */}
 
       {/* People Grid */}
-      {filteredPeople.length > 0 ? (
+      {/* {filteredPeople.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredPeople.map((person) => (
             <div
@@ -324,176 +619,170 @@ export default function CastCrew() {
             </Button>
           )}
         </div>
-      )}
+      )} */}
+      <CastCrewTable/>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPerson ? "Edit Person" : "Add New Person"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2">
-            {/* Image Preview & Upload - Compact */}
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                {formImage ? (
+      <Modal
+        title="Add Cast / Crew"
+        open={isAddDialogOpen}
+        onCancel={() => setIsAddDialogOpen(false)}
+        footer={null}
+        closable={false}
+        width={800}
+      >
+        <div className="rounded-2xl p-4 bg-white">
+          {/* <div className="image-upload-card box boxShadowData ">
+            <h4 className="text-xl"> Profile Image</h4>
+            <p className="image-hint">PNG preferred, transparent bg</p>
+            <div className="file-upload">
+              <input
+                type="file"
+                name="profileImage"
+                onChange={handleFileChange}
+                accept="image/*"
+                id="profileImage"
+              />
+              <label htmlFor="profileImage" className="image-upload-label">
+                {previewLogo || formData?.profileImage ? (
                   <img
-                    src={formImage}
-                    alt="Preview"
-                    className="h-16 w-16 rounded-full object-cover ring-2 ring-border"
+                    // src={previewLogo || form?.logoImage}
+                    src={previewLogo || formData?.profileImage?.url}
+                    alt="Profile Pic Preview"
+                    className="h-[300px] w-[200px]"
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary ring-2 ring-border">
-                    <User className="h-7 w-7 text-muted-foreground" />
+                  <div className="image-placeholder">
+                    <span>🏷️</span>
+                    <p>Upload Logo</p>
                   </div>
                 )}
-                {formImage && (
-                  <button
-                    onClick={() => setFormImage("")}
-                    className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-
-              {/* Image Input Toggle & Upload */}
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-1 rounded-md bg-secondary/50 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setImageInputType("upload")}
-                    className={cn(
-                      "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all",
-                      imageInputType === "upload"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <Upload className="h-3 w-3" />
-                    Upload
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImageInputType("url")}
-                    className={cn(
-                      "flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all",
-                      imageInputType === "url"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <Link className="h-3 w-3" />
-                    URL
-                  </button>
-                </div>
-                {imageInputType === "upload" ? (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full gap-1.5 text-xs"
-                    >
-                      <Upload className="h-3 w-3" />
-                      Choose Image
-                    </Button>
-                  </>
-                ) : (
-                  <Input
-                    placeholder="https://example.com/photo.jpg"
-                    value={formImage.startsWith("data:") ? "" : formImage}
-                    onChange={(e) => setFormImage(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                )}
-              </div>
+                <div className="image-overlay">📷 Change</div>
+              </label>
             </div>
+          </div> */}
+          <div className=" ">
+  <h4 className="text-xl font-semibold">Profile Image</h4>
+  <p className="text-sm text-gray-500 mb-4">
+    PNG preferred, transparent bg
+  </p>
 
-            {/* Name */}
-            <div className="space-y-1">
-              <Label htmlFor="personName" className="text-xs">Name *</Label>
+  <div className="flex items-center gap-6 ">
+    <div className="relative group">
+      <input
+        type="file"
+        name="profileImage"
+        onChange={handleFileChange}
+        accept="image/*"
+        id="profileImage"
+        className="hidden"
+      />
+
+      <label
+        htmlFor="profileImage"
+        className="cursor-pointer block"
+      >
+        {/* Image / Placeholder */}
+        {previewLogo || formData?.profileImage ? (
+          <img
+            src={previewLogo || formData?.profileImage?.url}
+            alt="Profile"
+            className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 shadow-sm"
+          />
+        ) : (
+          <div className="w-28 h-28 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+            <span className="text-2xl">👤</span>
+          </div>
+        )}
+
+        {/* Overlay */}
+        <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+          <span className="text-white text-sm flex items-center gap-1">
+            📷 Change
+          </span>
+        </div>
+      </label>
+    </div>
+
+    {/* Optional text */}
+    <div className="text-sm text-gray-500">
+      <p>Click to upload</p>
+      <p>JPG, PNG up to 2MB</p>
+    </div>
+  </div>
+</div>
+
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Person Name <span className="text-red-600">*</span>
+              </label>
+
               <Input
-                id="personName"
-                placeholder="Full name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                className="h-9"
+                placeholder="Person Name"
+                value={formData.personName}
+                onChange={(e) => handleChange("personName", e.target.value)}
               />
             </div>
+            <div className="w-full">
+              <label className="block text-sm font-medium mb-1">
+                 Role <span className="text-red-600">*</span>
+              </label>
 
-            {/* Roles - Compact Grid */}
-            <div className="space-y-1">
-              <Label className="text-xs">Roles *</Label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(Object.keys(roleLabels) as PersonRole[]).map((role) => {
-                  const Icon = roleIcons[role];
-                  const isChecked = formRoles.includes(role);
-                  return (
-                    <label
-                      key={role}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 transition-all",
-                        isChecked
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-secondary/50"
-                      )}
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={() => toggleRole(role)}
-                        className="h-3.5 w-3.5"
-                      />
-                      <Icon className="h-3 w-3" />
-                      <span className="text-xs">{roleLabels[role]}</span>
-                    </label>
-                  );
-                })}
-              </div>
+              <Select
+                className="w-full"
+                placeholder="Select Role"
+                value={formData.role || undefined}
+                onChange={(value) => handleChange("role", value)}
+              >
+                {CREW_ROLES.map((r) => (
+                  <Option key={r} value={r}>
+                    {r}
+                  </Option>
+                ))}
+              </Select>
             </div>
-
-            {/* Bio */}
-            <div className="space-y-1">
-              <Label htmlFor="personBio" className="text-xs">Bio (Optional)</Label>
-              <Textarea
-                id="personBio"
-                placeholder="Short biography..."
-                value={formBio}
-                onChange={(e) => setFormBio(e.target.value)}
-                className="min-h-[60px] text-sm"
-              />
+            <div>
+              {formData.role === "Other" && (
+                <>
+                  <label className="block text-sm font-medium mb-1">
+                    Character name
+                  </label>
+                  <Input
+                    placeholder="Character Name (Optional)"
+                    value={formData.characterName}
+                    onChange={(e) =>
+                      handleChange("characterName", e.target.value)
+                    }
+                  />
+                </>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button
+              className="border px-4 py-2 rounded"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
               Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingPerson ? "Save Changes" : "Add Person"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </button>
+            <Button onClick={() => finalAdd()}>{submitLoading?(<><Spin/></>):"Submit"}</Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+      <AlertDialog
+        open={!!deleteConfirmId}
+        onOpenChange={() => setDeleteConfirmId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Person?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this person from your database.
+              This action cannot be undone. This will permanently delete this
+              person from your database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -508,5 +797,12 @@ export default function CastCrew() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+     <CommonDeleteModal
+            open={open}
+            onCancel={() => setOpen(false)}
+            onConfirm={deleteCastCrew}
+            loading={deleteLoading}
+          /></>
+   
   );
 }

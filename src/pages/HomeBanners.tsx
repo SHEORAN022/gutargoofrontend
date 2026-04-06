@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WebSeries from "./WebSeries";
 
 export default function HomeBanners() {
-  // const { banners, isLoading, createBanner, updateBanner, deleteBanner, reorderBanners } = useHomeBanners();
+  // const { banners, isLoading, createBanner, updateBanner,  reorderBanners } = useHomeBanners();
   const API = axios.create({
     baseURL: "https://gutargoobackend-cem4.onrender.com/api",
     timeout: 300000,
