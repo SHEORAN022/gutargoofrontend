@@ -8,11 +8,10 @@ import { ArrowLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, Tag, Switch, Space, message, Select } from "antd";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
-
+import { getAllCastAndCrewAPI } from "../api/castCrew.js";
 const API = axios.create({
-  baseURL:
-    import.meta.env.VITE_BACKEND_URL ||
-    "https://gutargoobackend-cem4.onrender.com/api",
+  baseURL: import.meta.env.VITE_BACKEND_URL,
+  // baseURL: "http://81.17.100.176/api",
   timeout: 300000,
 });
 
@@ -179,7 +178,7 @@ const Movies = () => {
     publishStatus: false,
     subscriptionRequired: false,
     enableAds: true,
-    allowDownloads: false,
+    allowDownloads: true,
     featuredMovie: false,
     contentVendor: "Internal",
     vendorId: "",
@@ -607,7 +606,7 @@ const Movies = () => {
       publishStatus: false,
       subscriptionRequired: false,
       enableAds: true,
-      allowDownloads: false,
+      allowDownloads: true,
       featuredMovie: false,
       contentVendor: "Internal",
       vendorId: "",
@@ -712,7 +711,7 @@ const Movies = () => {
       publishStatus: movie.publishStatus || false,
       subscriptionRequired: movie.subscriptionRequired || false,
       enableAds: movie.enableAds !== undefined ? movie.enableAds : true,
-      allowDownloads: movie.allowDownloads || false,
+      allowDownloads: movie.allowDownloads || true,
       featuredMovie: movie.featuredMovie || false,
       contentVendor: movie.contentVendor || "Internal",
       vendorId: movie.vendorId || "",
@@ -763,126 +762,7 @@ const Movies = () => {
 
   const [totalPages, setTotalPages] = useState(1);
 
-  // const MovieTable = () => {
-
-  //   // 🔥 Fetch movies from backend
-  //   const fetchMovies = async (page = 1) => {
-  //     try {
-  //       const res = await    (
-  //         `/api/movies?page=${page}&limit=${limit}`
-  //       );
-  //       const data = await res.json();
-
-  //       setMovies(data.movies);
-  //       setTotalPages(data.totalPages);
-  //       setCurrentPage(data.currentPage);
-  //     } catch (err) {
-  //       console.error("Error fetching movies:", err);
-  //     }
-  //   };
-
-  //   useEffect(() => {
-  //     fetchMovies(currentPage);
-  //   }, [currentPage]);
-
-  //   return (
-  //     <div className="p-4 w-full">
-  //       {/* TABLE */}
-  //       <div className="overflow-x-auto">
-  //         <table className="min-w-full border border-gray-200 rounded-xl overflow-hidden">
-  //           <thead className="bg-gray-100">
-  //             <tr>
-  //               <th className="p-3 text-left">Poster</th>
-  //               <th className="p-3 text-left">Title</th>
-  //               <th className="p-3 text-left">Genre</th>
-  //               <th className="p-3 text-left">Language</th>
-  //               <th className="p-3 text-left">Year</th>
-  //               <th className="p-3 text-left">Rating</th>
-  //               <th className="p-3 text-left">Status</th>
-  //               <th className="p-3 text-left">Action</th>
-  //             </tr>
-  //           </thead>
-
-  //           <tbody>
-  //             {movies.map((movie) => (
-  //               <tr key={movie._id} className="border-t hover:bg-gray-50">
-  //                 <td className="p-3">
-  //                   <img
-  //                     src={movie.verticalPoster?.url}
-  //                     alt={movie.movieTitle}
-  //                     className="w-12 h-12 object-cover rounded-[8px]"
-  //                   />
-  //                 </td>
-
-  //                 <td className="p-3 font-semibold">
-  //                   {movie.movieTitle}
-  //                 </td>
-
-  //                 <td className="p-3">
-  //                   {movie.genres?.join(", ")}
-  //                 </td>
-
-  //                 <td className="p-3">{movie.language}</td>
-
-  //                 <td className="p-3">{movie.releaseYear}</td>
-
-  //                 <td className="p-3">⭐ {movie.imdbRating}</td>
-
-  //                 {/* STATUS TOGGLE */}
-  //                 <td className="p-3">
-  //                   <div className="flex items-center gap-3">
-  //                     <button
-  //                       onClick={() =>
-  //                         togglePublishStatus(movie._id)
-  //                       }
-  //                       className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
-  //                         movie.publishStatus
-  //                           ? "bg-green-500"
-  //                           : "bg-gray-300"
-  //                       }`}
-  //                     >
-  //                       <span
-  //                         className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-  //                           movie.publishStatus
-  //                             ? "translate-x-6"
-  //                             : "translate-x-0"
-  //                         }`}
-  //                       />
-  //                     </button>
-
-  //                     <span
-  //                       className={`text-sm font-medium ${
-  //                         movie.publishStatus
-  //                           ? "text-green-600"
-  //                           : "text-yellow-600"
-  //                       }`}
-  //                     >
-  //                       {movie.publishStatus
-  //                         ? "Published"
-  //                         : "Draft"}
-  //                     </span>
-  //                   </div>
-  //                 </td>
-
-  //                 {/* ACTIONS */}
-  //                 <td className="p-3">
-  //                   <div className="flex gap-3 items-center">
-  //                     <div
-  //                       onClick={() => editMovie(movie)}
-  //                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
-  //                     >
-  //                       Edit
-  //                     </div>
-  //                     <div
-  //                       onClick={() =>
-  //                         deleteMovie(movie._id)
-  //                       }
-  //                       className="border border-gray-300 rounded-[8px] px-3 py-1 cursor-pointer"
-  //                     >
-  //                       Delete
-  //                     </div>
-  //                   </div>
-  //                 </td>
+  const [getAllCast, setGetAllCaset] = useState([]);
 
   const MovieTable = () => {
     const columns = [
@@ -997,261 +877,69 @@ const Movies = () => {
     );
   };
 
-  // ─── Movie Card ─────────────────────────────────────────────────────────
-  // const MovieCard = ({ movie }) => {
-  //   const posterUrl = movie.verticalPoster?.url;
-  //   const bannerUrl = movie.horizontalBanner?.url;
-  //   const logoUrl = movie.logo?.url;
-  //   const videoUrl = movie.movieFile?.status === 4 ? movie.movieFile?.hlsUrl : movie.customVideoUrl || null;
-  //   const isHls = videoUrl?.includes(".m3u8") || videoUrl?.includes("playlist.m3u8");
+  const [groupedData, setGroupedData] = useState({});
+  const handleSelectCast = (id, field) => {
+    const selectedPerson = getAllCast.find((p) => p._id === id);
+    if (!selectedPerson) return;
 
-  //   return (
-  //     <div className="movie-card">
-  //       <div className="movie-poster">
-  //         {posterUrl ? (
-  //           <img src={posterUrl} alt={movie.movieTitle}
-  //             onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/300x450?text=No+Poster"; }}
-  //           />
-  //         ) : (
-  //           <div className="poster-placeholder">🎬 No Poster</div>
-  //         )}
-  //         <div className="movie-overlay">
-  //           <button className="edit-btn" onClick={() => editMovie(movie)}>✏️ Edit</button>
-  //           <button className="delete-btn" onClick={() => deleteMovie(movie._id)}>🗑️ Delete</button>
-  //           {movie.movieFile?.status === 4 || movie.customVideoUrl ? (
-  //             <button className="play-btn" onClick={() => playVideo(videoUrl, isHls ? "hls" : "mp4")}>▶️ Play</button>
-  //           ) : (
-  //             <span className="processing-badge">⏳ Processing</span>
-  //           )}
-  //         </div>
-  //       </div>
-  //       <div className="movie-info">
-  //         <div className="movie-header">
-  //           {logoUrl && <img src={logoUrl} alt="Logo" className="movie-logo" />}
-  //           <h3>{movie.movieTitle}</h3>
-  //         </div>
-  //         <div className="movie-meta">
-  //           <span>📅 {movie.releaseYear}</span>
-  //           <span>⏱️ {movie.duration} min</span>
-  //           <button
-  //             className={`publish-toggle ${movie.publishStatus ? "published" : "draft"}`}
-  //             onClick={() => togglePublishStatus(movie._id)}
-  //           >
-  //             {movie.publishStatus ? "✅ Published" : "📝 Draft"}
-  //           </button>
-  //         </div>
-  //         <div className="movie-genres">
-  //           {movie.genres?.slice(0, 3).map((g, i) => <span key={i} className="genre">{g}</span>)}
-  //         </div>
-  //         <div className="movie-rating">⭐ {movie.imdbRating || "N/A"}</div>
+    const existing = formData[field] || [];
 
-  //         {bannerUrl && (
-  //           <div className="movie-banner-preview">
-  //             <img src={bannerUrl} alt="Banner" className="banner-thumb"
-  //               onError={(e) => { e.target.style.display = "none"; }}
-  //             />
-  //           </div>
-  //         )}
+    console.log(existing, "get existing here ", selectedPerson);
 
-  //         {movie.movieFile?.status === 4 && (
-  //           <div className="video-url-info">
-  //             <small>🎬 HLS Stream Ready</small>
-  //             <button className="copy-url-btn" onClick={() => { navigator.clipboard.writeText(movie.movieFile.hlsUrl); toast.success("HLS URL copied"); }}>
-  //               Copy HLS URL
-  //             </button>
-  //           </div>
-  //         )}
-
-  //         {movie.trailer?.status === 4 && (
-  //           <div className="video-url-info trailer-info">
-  //             <small>🎞️ Trailer Ready</small>
-  //             <button className="play-btn-sm" onClick={() => playVideo(movie.trailer.hlsUrl, "hls")}>▶ Play Trailer</button>
-  //           </div>
-  //         )}
-
-  //         {movie.director?.length > 0 && (
-  //           <div className="movie-crew">
-  //             <strong>Director:</strong>{" "}
-  //             {movie.director.map((d) => (typeof d === "string" ? d : d.name)).join(", ")}
-  //           </div>
-  //         )}
-
-  //         {movie.castMembers?.length > 0 && (
-  //           <div className="movie-cast">
-  //             <strong>Cast:</strong>
-  //             <div className="cast-list">
-  //               {movie.castMembers.slice(0, 2).map((c, i) => (
-  //                 <span key={i} className="cast-item">{c.name} as "{c.character}"</span>
-  //               ))}
-  //               {movie.castMembers.length > 2 && <span>+{movie.castMembers.length - 2} more</span>}
-  //             </div>
-  //           </div>
-  //         )}
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
-  const MovieCard = ({ movie }) => {
-    const posterUrl = movie.verticalPoster?.url;
-    const bannerUrl = movie.horizontalBanner?.url;
-    const logoUrl = movie.logo?.url;
-    const videoUrl =
-      movie.movieFile?.status === 4
-        ? movie.movieFile?.hlsUrl
-        : movie.customVideoUrl || null;
-
-    const isHls =
-      videoUrl?.includes(".m3u8") || videoUrl?.includes("playlist.m3u8");
-
-    return (
-      <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition duration-300 overflow-hidden">
-        {/* Poster */}
-        <div className="relative">
-          {posterUrl ? (
-            <img
-              src={posterUrl}
-              alt={movie.movieTitle}
-              className="w-full h-[180px] object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src =
-                  "https://via.placeholder.com/300x450?text=No+Poster";
-              }}
-            />
-          ) : (
-            <div className="h-[320px] flex items-center justify-center bg-gray-100">
-              No Poster
-            </div>
-          )}
-
-          {/* Overlay Actions */}
-          <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition flex items-center justify-center gap-2">
-            <button
-              className="px-3 py-1 bg-white text-sm rounded-md"
-              onClick={() => editMovie(movie)}
-            >
-              Edit
-            </button>
-
-            <button
-              className="px-3 py-1 bg-red-500 text-white text-sm rounded-md"
-              onClick={() => deleteMovie(movie._id)}
-            >
-              Delete
-            </button>
-
-            {(movie.movieFile?.status === 4 || movie.customVideoUrl) && (
-              <button
-                className="px-3 py-1 bg-green-500 text-white text-sm rounded-md"
-                onClick={() => playVideo(videoUrl, isHls ? "hls" : "mp4")}
-              >
-                Play
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            {logoUrl && <img src={logoUrl} alt="Logo" className="h-6" />}
-            <h3 className="font-semibold text-lg">{movie.movieTitle}</h3>
-          </div>
-
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>{movie.releaseYear}</span>
-            <span>{movie.duration} min</span>
-          </div>
-
-          <button
-            className={`px-3 py-1 text-xs rounded-md ${
-              movie.publishStatus
-                ? "bg-green-100 text-green-600"
-                : "bg-gray-200 text-gray-600"
-            }`}
-            onClick={() => togglePublishStatus(movie._id)}
-          >
-            {movie.publishStatus ? "Published" : "Draft"}
-          </button>
-
-          {/* Genres */}
-          <div className="flex flex-wrap gap-1">
-            {movie.genres?.slice(0, 3).map((g, i) => (
-              <span key={i} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                {g}
-              </span>
-            ))}
-          </div>
-
-          {/* Rating */}
-          <div className="text-sm font-medium">
-            Rating: {movie.imdbRating || "N/A"}
-          </div>
-
-          {/* Banner */}
-          {bannerUrl && (
-            <img
-              src={bannerUrl}
-              alt="Banner"
-              className="w-full h-20 object-cover rounded-md"
-              onError={(e) => (e.target.style.display = "none")}
-            />
-          )}
-
-          {/* HLS */}
-          {movie.movieFile?.status === 4 && (
-            <div className="flex justify-between items-center text-xs">
-              <span>Stream Ready</span>
-              <button
-                className="text-blue-600"
-                onClick={() => {
-                  navigator.clipboard.writeText(movie.movieFile.hlsUrl);
-                  toast.success("HLS URL copied");
-                }}
-              >
-                Copy URL
-              </button>
-            </div>
-          )}
-
-          {/* Trailer */}
-          {movie.trailer?.status === 4 && (
-            <button
-              className="text-sm text-blue-600"
-              onClick={() => playVideo(movie.trailer.hlsUrl, "hls")}
-            >
-              Play Trailer
-            </button>
-          )}
-
-          {/* Director */}
-          {movie.director?.length > 0 && (
-            <div className="text-xs text-gray-600">
-              <strong>Director:</strong>{" "}
-              {movie.director
-                .map((d) => (typeof d === "string" ? d : d.name))
-                .join(", ")}
-            </div>
-          )}
-
-          {/* Cast */}
-          {movie.castMembers?.length > 0 && (
-            <div className="text-xs text-gray-600">
-              <strong>Cast:</strong>{" "}
-              {movie.castMembers
-                .slice(0, 2)
-                .map((c) => `${c.name} (${c.character})`)
-                .join(", ")}
-              {movie.castMembers.length > 2 &&
-                ` +${movie.castMembers.length - 2} more`}
-            </div>
-          )}
-        </div>
-      </div>
+    const alreadyExists = existing.some(
+      (item) => item.name === selectedPerson.personName,
     );
+    if (alreadyExists) return;
+
+    const newMember = {
+      name: selectedPerson.personName,
+      imageUrl: selectedPerson.imageUrl || "",
+      publicId: selectedPerson.publicId || "",
+    };
+
+    console.log("Adding:", newMember); // 👈 check here
+
+    handleArrayChange(field, [...existing, newMember]);
+  };
+  const groupByRole = (data) => {
+    const grouped = {};
+
+    data.forEach((item) => {
+      let role = item.role || "Other";
+
+      // Treat "Other" as cast
+      if (role === "Other") {
+        role = "cast";
+      }
+
+      if (!grouped[role]) {
+        grouped[role] = [];
+      }
+
+      grouped[role].push(item);
+    });
+
+    return grouped;
   };
 
+  const getCastAndCrewAll = async () => {
+    try {
+      const res = await getAllCastAndCrewAPI();
+      if (res?.status === 200) {
+        const response = res?.data?.data || [];
+        setGetAllCaset(response);
+
+        const grouped = groupByRole(response);
+        setGroupedData(grouped);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getCastAndCrewAll();
+  }, []);
   // ─── Crew name helper ────────────────────────────────────────────────────
   const getCrewName = (member) =>
     typeof member === "string" ? member : member?.name || "";
@@ -1262,6 +950,7 @@ const Movies = () => {
       </div>
     );
   }
+
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
     // <AdminLayout>
@@ -1979,6 +1668,25 @@ const Movies = () => {
                             <h4 className="text-lg">
                               {icon} {role}
                             </h4>
+                            {/* <Select
+                              showSearch
+                              placeholder={`Select ${role}`}
+                              style={{ width: "100%", marginBottom: 10 }}
+                              onChange={(value) =>
+                                handleSelectCast(value, field)
+                              }
+
+                               filterOption={(input, option) =>
+                    option?.children?.toLowerCase().includes(input.toLowerCase())
+                  }
+
+                            >
+                              {(groupedData[role] || []).map((person) => (
+                                <Option key={person._id} value={person._id}>
+                                  {person.personName}
+                                </Option>
+                              ))}
+                            </Select> */}
                             <div className="crew-list">
                               {(formData[field] || []).map((member, idx) => (
                                 <div key={idx} className="crew-member-row">
@@ -2046,6 +1754,7 @@ const Movies = () => {
                           </div>
                         ) : (
                           <div className="cast-grid">
+                            
                             {formData.castMembers.map((cast, idx) => (
                               <div key={idx} className="cast-member-card">
                                 {/* Cast photo upload */}

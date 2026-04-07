@@ -12,6 +12,7 @@ import {
 } from "../api/category.js";
 import { Input, message, Modal, Select, Spin, Table } from "antd";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
+import axios from "axios";
 
 interface Category {
   id: string;
@@ -27,7 +28,43 @@ interface Category {
 }
 
 export default function Categories() {
+  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "http://81.17.100.176/api"
+  
+  // Create axios instance
+   const api = axios.create({
+    baseURL: API_BASE_URL,
+    // withCredentials: true,
+    // headers: {
+    //   'Content-Type': 'application/json',
+    // },
+  });
+  
+  // ✅ Add request interceptor
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+  
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+  
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
 
+const categoryAPI = '/category'
+
+ const getCategoryListingAPI = async () => await api.get(categoryAPI)
+
+ const addCategoryAPI = async (body) => await api.post(categoryAPI,body)
+
+ const deleteCategoryAPI = async (id) => await api.delete(categoryAPI+"/"+id)
+
+
+ const editCategoryAPI = async (id,data) => await api.put(categoryAPI+"/"+id,data)
   const {Option} = Select
 
   const queryClient = useQueryClient();

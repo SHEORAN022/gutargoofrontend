@@ -6,30 +6,57 @@ import { ImageOffIcon, Pencil, Plus, Trash2 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 // import { getAllBannersAPI, deleteBannerAPI,addBannerAPI } from "../api/banner";
-import {
-  getAllBannersAPI,
-  deleteBannerAPI,
-  addBannerAPI,
-  editBannerAPI,
-} from "../api/banner";
+// import {
+//   getAllBannersAPI,
+//   deleteBannerAPI,
+//   addBannerAPI,
+//   editBannerAPI,
+// } from "../api/banner";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
-import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
+// import { getMoviesSelectAPI, getCategoriesAPI } from "../api/movies";
 import { Image, Input, message, Modal, Select, Spin, Table } from "antd";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WebSeries from "./WebSeries";
 
 export default function HomeBanners() {
-  // const { banners, isLoading, createBanner, updateBanner,  reorderBanners } = useHomeBanners();
-  const API = axios.create({
-    baseURL: "https://gutargoobackend-cem4.onrender.com/api",
-    timeout: 300000,
+  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "http://81.17.100.176/api"
+  
+  // Create axios instance
+   const api = axios.create({
+    baseURL: API_BASE_URL,
+    // withCredentials: true,
+    // headers: {
+    //   'Content-Type': 'application/json',
+    // },
   });
+  
+  // ✅ Add request interceptor
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+  
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+  
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+  const bannerAPI = "/banners"
 
-  API.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
+const getMoviesSelect = "/movies"
+const getCategories = "/category"
+ const getMoviesSelectAPI = async (params)=> await api.get(getMoviesSelect,{params})
+ const getCategoriesAPI = async ()=>await api.get(getCategories)
+   const getAllBannersAPI = async() => await api.get(bannerAPI) 
+   const deleteBannerAPI = async (id)=> await api.delete(bannerAPI+"/"+id)
+  
+   const addBannerAPI = async (body)=> await api.post(bannerAPI,body)
+  
+   const editBannerAPI  = async(id,data) => await api.put(bannerAPI+"/"+id,data)
   const [form, setForm] = useState({});
   const [previewLogo, setPreviewLogo] = useState(null);
   const [previewBannerLogo, setPreviewBannerLogo] = useState(null);

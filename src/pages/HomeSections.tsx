@@ -77,13 +77,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  getSectionAPI,
-  addSectionAPI,
-  deleteSectionAPI,
-  editSectionAPI,
-  dragAndDropAPI
-} from "../api/section";
+// import {
+//   getSectionAPI,
+//   addSectionAPI,
+//   deleteSectionAPI,
+//   editSectionAPI,
+//   dragAndDropAPI
+// } from "../api/section";
 import CommonDeleteModal from "../components/AntdComponents/Modal";
 
 import {
@@ -96,7 +96,8 @@ import {
   Switch,
   Table,
 } from "antd";
-import { getCategoriesAPI, getMoviesSelectAPI} from "../api/movies";
+// import { getCategoriesAPI, getMoviesSelectAPI} from "../api/movies";
+import axios from "axios";
 const SECTION_TYPES: {
   value: SectionType;
   label: string;
@@ -178,119 +179,7 @@ function SectionIcon({ type }: { type: SectionType }) {
   return <Icon className="h-4 w-4" />;
 }
 
-function SortableSectionCard({
-  section,
-  onEdit,
-  onDelete,
-}: {
-  section: HomeSection;
-  onEdit: (s: HomeSection) => void;
-  onDelete: (id: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: section.id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const getDisplayStyleLabel = () => {
-    const labels: Record<string, string> = {
-      horizontal_banner: "H Banner",
-      vertical_banner: "V Banner",
-      big_horizontal: "Big H",
-      big_vertical: "Big V",
-      index_horizontal: "Index H",
-      index_vertical: "Index V",
-    };
-    return labels[section.display_style] || section.display_style;
-  };
-
-  return (
-    <Card ref={setNodeRef} style={style} className="group">
-      <CardContent className="flex items-center gap-4 p-4">
-        <div {...attributes} {...listeners} className="cursor-grab p-1">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
-        </div>
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <SectionIcon type={section.section_type} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium truncate">{section.title}</h3>
-            {section.is_active ? (
-              <Badge className="bg-green-500/10 text-green-600 text-xs">
-                <Eye className="mr-1 h-3 w-3" />
-                Active
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="text-xs">
-                <EyeOff className="mr-1 h-3 w-3" />
-                Inactive
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">
-              {section.section_type.replace(/_/g, " ")}
-            </Badge>
-            <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-muted-foreground capitalize">
-              {section.content_type}
-            </span>
-            <span className="text-xs text-muted-foreground">•</span>
-            <Badge variant="outline" className="text-[10px]">
-              {getDisplayStyleLabel()}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1 max-w-32">
-          {section.visible_tabs.slice(0, 3).map((tab) => (
-            <Badge key={tab} variant="secondary" className="text-[10px]">
-              {tab}
-            </Badge>
-          ))}
-          {section.visible_tabs.length > 3 && (
-            <Badge variant="secondary" className="text-[10px]">
-              +{section.visible_tabs.length - 3}
-            </Badge>
-          )}
-        </div>
-
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" onClick={() => onEdit(section)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Section?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove "{section.title}" from all tabs.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(section.id)}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 interface SelectedContent {
   id: string;
@@ -302,6 +191,52 @@ interface SelectedContent {
 export default function HomeSections() {
   const { sections, createSection, updateSection, reorderSections } =
     useHomeSections();
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL|| "http://81.17.100.176/api"
+
+// Create axios instance
+ const api = axios.create({
+  baseURL: API_BASE_URL,
+  // withCredentials: true,
+  // headers: {
+  //   'Content-Type': 'application/json',
+  // },
+});
+
+// ✅ Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+const getSection = "/admin/sections"
+const reorder = "/admin/sections/reorder"
+ const getSectionAPI = async()=> await api.get(getSection) 
+
+
+ const addSectionAPI = async (data)=> await api.post(getSection,data)
+
+ const deleteSectionAPI = async (id) => await api.delete(getSection+"/"+id)
+
+
+ const editSectionAPI = async (id,body) => await api.put(getSection+"/"+id,body)
+
+ const dragAndDropAPI = async(body) => await api.put(reorder,body)
+const getMoviesSelect = "/movies"
+const getCategories = "/category"
+ const getMoviesSelectAPI = async (params)=> await api.get(getMoviesSelect,{params})
+
+ const getCategoriesAPI = async ()=>await api.get(getCategories)
+
   const { categories } = useCategories();
   const { movies } = useMoviesDB();
   const { webSeries } = useWebSeriesDB();

@@ -1,6 +1,7 @@
 import { api } from "./axios"
 
 const castCrew = "/castAndCrew"
+const getCasetCrew ="/castAndCrew/getAll"
 
 
 
@@ -24,3 +25,6 @@ export const updateCastAndCrewAPI = async (id, body) =>
 // DELETE
 export const deleteCastAndCrewAPI = async (id) =>
   await api.delete(`${castCrew}/${id}`);
+
+export const getAllCastAndCrewAPI = async() => await api.get(getCasetCrew)
+
