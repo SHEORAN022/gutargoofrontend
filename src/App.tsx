@@ -18,6 +18,8 @@ import AddTVShow from "@/pages/AddTVShow";
 import ShortMovies from "@/pages/ShortMovies";
 import AddShortMovie from "@/pages/AddShortMovie";
 import Users from "@/pages/Users";
+import ReedemCode from "./pages/RedeemCode"
+
 import Vendors from "@/pages/Vendors";
 import Subscriptions from "@/pages/Subscriptions";
 import Categories from "@/pages/Categories";
@@ -29,7 +31,6 @@ import NotFound from "@/pages/NotFound";
 import HomeBanners from "@/pages/HomeBanners";
 import HomeSections from "@/pages/HomeSections";
 import HomeSettings from "@/pages/HomeSettings";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -63,6 +64,7 @@ const App = () => (
                   <Route path="/short-movies/edit/:id" element={<AddShortMovie />} />
                   <Route path="/cast-crew" element={<CastCrew />} />
                   <Route path="/users" element={<Users />} />
+                  <Route path="/redeem-code" element={<ReedemCode />} />
                   <Route path="/vendors" element={<Vendors />} />
                   <Route path="/subscriptions" element={<Subscriptions />} />
                   <Route path="/categories" element={<Categories />} />

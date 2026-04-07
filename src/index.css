@@ -236,3 +236,10 @@ textarea:focus { border-color: #DC143C; }
 .ant-input{
   height: 36px;
 }
+.ant-picker{
+  height: 36px !important;
+}
+.ant-input-number{
+  height: 36px !important;
+
+}

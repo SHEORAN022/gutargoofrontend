@@ -205,7 +205,7 @@ const getCastCrewData = async (page = 1, limit = 10) => {
         render: (_, record) => (
           <div>
             <div style={{ fontWeight: 500 }}>
-              {record.title || "Person Name"}
+              {record.personName || "Person Name"}
             </div>
           </div>
         ),

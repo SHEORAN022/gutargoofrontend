@@ -6,7 +6,7 @@ import { getUserDataAPI } from "../api/user.js";
 import dayjs from "dayjs";
 
 export default function Users() {
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50);
   const [page, setPage] = useState(1);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);

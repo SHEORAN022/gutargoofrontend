@@ -106,6 +106,46 @@ const VideoPlayer = ({ url, type }) => {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const Movies = () => {
+
+    const handleSelectCast = (id, field) => {
+    const selectedPerson = getAllCast.find((p) => p._id === id);
+    if (!selectedPerson) return;
+
+    const existing = formData[field] || [];
+
+    console.log(existing, "get existing here ", selectedPerson);
+
+    const alreadyExists = existing.some(
+      (item) => item.name === selectedPerson.personName,
+    );
+    if (alreadyExists) return;
+
+    const newMember = {
+      name: selectedPerson.personName,
+      imageUrl: selectedPerson.imageUrl || "",
+      publicId: selectedPerson.publicId || "",
+    };
+
+    console.log("Adding:", newMember); // 👈 check here
+
+    handleArrayChange(field, [...existing, newMember]);
+  };
+
+  const handleSelectCastNew = (id) => {
+  const selectedPerson = getAllCast.find((p) => p._id === id);
+  if (!selectedPerson) return;
+
+  const newCast = {
+    name: selectedPerson.personName,
+    character:selectedPerson?.characterName,
+    imageUrl: selectedPerson.imageUrl || "",
+  };
+
+  setFormData((prev) => ({
+    ...prev,
+    castMembers: [...prev.castMembers, newCast],
+  }));
+};
   const { Option } = Select;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -878,29 +918,7 @@ const Movies = () => {
   };
 
   const [groupedData, setGroupedData] = useState({});
-  const handleSelectCast = (id, field) => {
-    const selectedPerson = getAllCast.find((p) => p._id === id);
-    if (!selectedPerson) return;
 
-    const existing = formData[field] || [];
-
-    console.log(existing, "get existing here ", selectedPerson);
-
-    const alreadyExists = existing.some(
-      (item) => item.name === selectedPerson.personName,
-    );
-    if (alreadyExists) return;
-
-    const newMember = {
-      name: selectedPerson.personName,
-      imageUrl: selectedPerson.imageUrl || "",
-      publicId: selectedPerson.publicId || "",
-    };
-
-    console.log("Adding:", newMember); // 👈 check here
-
-    handleArrayChange(field, [...existing, newMember]);
-  };
   const groupByRole = (data) => {
     const grouped = {};
 
@@ -1747,6 +1765,18 @@ const Movies = () => {
 
                     <div className="boxShadowData rounded-[12px] p-4 ">
                       <h3 className=" text-xl font-semibold"> Cast Members</h3>
+                        {/* <Select
+                              showSearch
+                              placeholder="Select Cast Member"
+                              style={{ width: "100%", marginBottom: 10 }}
+                              onChange={(value) => handleSelectCastNew(value)}
+                            >
+                              {(groupedData["cast"] || []).map((person) => (
+                                <Option key={person._id} value={person._id}>
+                                  {person.personName}
+                                </Option>
+                              ))}
+                            </Select> */}
                       <div className="cast-section mt-4">
                         {formData.castMembers.length === 0 ? (
                           <div className="empty-cast">
@@ -1754,7 +1784,7 @@ const Movies = () => {
                           </div>
                         ) : (
                           <div className="cast-grid">
-                            
+                          
                             {formData.castMembers.map((cast, idx) => (
                               <div key={idx} className="cast-member-card">
                                 {/* Cast photo upload */}

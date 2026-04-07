@@ -54,6 +54,7 @@ const homeManagementNavItems: NavItem[] = [
 
 const managementNavItems: NavItem[] = [
   { title: "Users", icon: Users, href: "/users" },
+  { title: "Redeem Code", icon: Users, href: "/redeem-code" },
   { title: "Vendors", icon: Store, href: "/vendors", badge: 3 },
   { title: "Subscriptions", icon: CreditCard, href: "/subscriptions" },
   { title: "Ads Manager", icon: Megaphone, href: "/ads" },
