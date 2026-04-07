@@ -78,9 +78,9 @@ export default function ReedemCode() {
               Redeem Code
             </h1>
           </div>
-          <Button onClick={openCreateDialog}>
+          {/* <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" /> Add Redeem Code
-          </Button>
+          </Button> */}
         </div>
 
         {/* Table */}
