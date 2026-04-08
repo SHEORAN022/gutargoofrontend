@@ -3,13 +3,14 @@ import {
   DatePicker,
   Input,
   InputNumber,
+  message,
   Modal,
   Select,
   Spin,
   Switch,
   Table,
 } from "antd";
-import { getRedeemDataAPI } from "../api/redeemcode.js";
+import { getRedeemDataAPI, addRedeemDataAPI } from "../api/redeemcode.js";
 import dayjs from "dayjs";
 import { Button } from "@/components/ui/button.js";
 import { Plus } from "lucide-react";
@@ -21,7 +22,7 @@ export default function ReedemCode() {
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
-  const getUserData = async () => {
+  const getRedeemCode = async () => {
     try {
       setLoading(true);
       const res = await getRedeemDataAPI();
@@ -37,15 +38,33 @@ export default function ReedemCode() {
   };
 
   useEffect(() => {
-    getUserData();
+    getRedeemCode();
   }, []);
 
   // Table columns
   const columns = [
     {
-      title: "Mobile Number",
-      dataIndex: "mobile",
-      key: "mobile",
+      title: "Code Number",
+      dataIndex: "code",
+      key: "code",
+    },
+    {
+      title: "Max Uses",
+      dataIndex: "maxUses",
+      key: "maxUses",
+    },
+    {
+      title: "Code Type",
+      dataIndex: "type",
+      key: "type",
+    },
+    {
+      title: "Expiry Date",
+      dataIndex: "expiryDate",
+      key: "expiryDate",
+      render: (data) => {
+        return <div>{dayjs(data).format("YYYY-MM-DD HH:mm")}</div>;
+      },
     },
     {
       title: "Created At",
@@ -61,11 +80,29 @@ export default function ReedemCode() {
   const [editData, setEditData] = useState(false);
   const [form, setForm] = useState({});
   const [dialogOpen, setDialogOpen] = useState(false);
-
+  const [submitLoading, setSubmitLoading] = useState(false);
   const openCreateDialog = () => {
     setEditData(false);
     setForm({});
     setDialogOpen(true);
+  };
+
+  const addRedeemCode = async () => {
+    try {
+      setSubmitLoading(true);
+      const res = await addRedeemDataAPI(form);
+      console.log(res, "set the response here ");
+      if (res?.status === 201) {
+        message.success(res?.data?.message ||"Redeem code added successfully")
+        setForm({});
+        setDialogOpen(false);
+        getRedeemCode()
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   return (
@@ -78,9 +115,9 @@ export default function ReedemCode() {
               Redeem Code
             </h1>
           </div>
-          {/* <Button onClick={openCreateDialog}>
+          <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" /> Add Redeem Code
-          </Button> */}
+          </Button>
         </div>
 
         {/* Table */}
@@ -121,7 +158,7 @@ export default function ReedemCode() {
                 <CommonLabel label="Code Type" />
 
                 <Select
-                className="w-full"
+                  className="w-full"
                   value={form?.type}
                   onChange={(val) => handleChange("type", val)}
                 >
@@ -145,6 +182,7 @@ export default function ReedemCode() {
               <div>
                 <CommonLabel label="Expiry Date" />
                 <DatePicker
+                  className="w-full"
                   value={form.expiryDate}
                   onChange={(date) => handleChange("expiryDate", date)}
                 />
@@ -160,7 +198,7 @@ export default function ReedemCode() {
                   onChange={(val) => handleChange("maxUses", val)}
                 />
               </div>
- <div>
+              {/* <div>
                 <CommonLabel label="Used Count" />
 
                 <InputNumber
@@ -170,7 +208,7 @@ export default function ReedemCode() {
                   value={form?.usedCount}
                   onChange={(val) => handleChange("maxUses", val)}
                 />
-              </div>
+              </div> */}
               {/* <div>
                
                   <span>Active</span>
@@ -181,27 +219,23 @@ export default function ReedemCode() {
                 
               </div> */}
             </div>
-             <div className="flex justify-end gap-2 mt-6">
-            <button
-              onClick={() => {
-                setForm({});
-                setEditData(false);
-                setDialogOpen(false);
-              }}
-              className="border px-4 py-2 rounded"
-            >
-              Cancel
-            </button>
-            {/* <Button onClick={()=>addBannerAPIData()}>Submit</Button> */}
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setForm({});
+                  setEditData(false);
+                  setDialogOpen(false);
+                }}
+                className="border px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+              {/* <Button onClick={()=>addBannerAPIData()}>Submit</Button> */}
 
-            <Button>
-              {loading ? (
-                <Spin />
-              ) : (
-                <> Submit</>
-              )}
-            </Button>
-          </div>
+              <Button onClick={() => addRedeemCode()}>
+                {submitLoading ? <Spin /> : <> Submit</>}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

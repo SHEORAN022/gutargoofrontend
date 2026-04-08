@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import WebSeries from "./WebSeries";
 
 export default function HomeBanners() {
-  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "http://81.17.100.176/api"
+  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "https://gutargooplus.com/api/api"
   
   // Create axios instance
    const api = axios.create({

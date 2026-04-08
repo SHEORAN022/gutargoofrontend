@@ -28,7 +28,7 @@ interface Category {
 }
 
 export default function Categories() {
-  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "http://81.17.100.176/api"
+  const API_BASE_URL =import.meta.env.VITE_BACKEND_URL || "https://gutargooplus.com/api/api"
   
   // Create axios instance
    const api = axios.create({

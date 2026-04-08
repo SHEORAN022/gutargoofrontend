@@ -1,74 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  useHomeSections,
-  HomeSection,
-  SectionFormData,
-  SectionType,
-  ContentSource,
-  DisplayStyle,
-  AppTab,
-  useSectionItems,
-} from "@/hooks/useHomeSections";
-import { useCategories } from "@/hooks/useCategories";
-import { useMoviesDB } from "@/hooks/useMoviesDB";
-import { useWebSeriesDB } from "@/hooks/useWebSeriesDB";
-import { useTVShowsDB } from "@/hooks/useTVShowsDB";
-import { useShortMoviesDB } from "@/hooks/useShortMoviesDB";
+
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  GripVertical,
-  LayoutGrid,
-  Rows3,
-  Eye,
-  EyeOff,
-  TrendingUp,
-  Clock,
-  Star,
-  Heart,
-  FolderOpen,
-  List,
-  X,
-  Film,
-  Tv,
-  GripVerticalIcon,
-} from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-
-
-
-
+import { Plus, Pencil, Trash2, GripVerticalIcon } from "lucide-react";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
@@ -98,360 +32,77 @@ import {
 } from "antd";
 // import { getCategoriesAPI, getMoviesSelectAPI} from "../api/movies";
 import axios from "axios";
-const SECTION_TYPES: {
-  value: SectionType;
-  label: string;
-  icon: React.ElementType;
-  description: string;
-}[] = [
-  {
-    value: "continue_watching",
-    label: "Continue Watching",
-    icon: Clock,
-    description: "User's in-progress content",
-  },
-  {
-    value: "trending_now",
-    label: "Trending Now",
-    icon: TrendingUp,
-    description: "Popular content based on views",
-  },
-  {
-    value: "latest_releases",
-    label: "Latest Releases",
-    icon: Star,
-    description: "Recently added content",
-  },
-  {
-    value: "top_rated",
-    label: "Top Rated",
-    icon: Star,
-    description: "Highest rated content",
-  },
-  {
-    value: "recommended",
-    label: "Recommended",
-    icon: Heart,
-    description: "Personalized suggestions",
-  },
-  {
-    value: "category_based",
-    label: "Category Based",
-    icon: FolderOpen,
-    description: "Content from specific category",
-  },
-  {
-    value: "custom_collection",
-    label: "Custom Collection",
-    icon: List,
-    description: "Manually selected content",
-  },
-];
-
-const CONTENT_SOURCES: { value: ContentSource; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "most_viewed", label: "Most Viewed" },
-  { value: "recently_added", label: "Recently Added" },
-  { value: "watch_time_based", label: "Watch Time Based" },
-  { value: "admin_selected", label: "Admin Selected" },
-];
-
-const CONTENT_TYPES = [
-  { value: "all", label: "All Content" },
-  { value: "movies", label: "Movies Only" },
-  { value: "web_series", label: "Web Series Only" },
-  { value: "tv_shows", label: "TV Shows Only" },
-  { value: "short_movies", label: "Short Movies Only" },
-];
-
-const TAB_OPTIONS: { value: AppTab; label: string }[] = [
-  { value: "home", label: "Home" },
-  { value: "originals", label: "Originals" },
-  { value: "movies", label: "Movies" },
-  { value: "tv_shows", label: "TV Shows" },
-  { value: "web_series", label: "Web Series" },
-  { value: "short_movies", label: "Short Movies" },
-];
-
-function SectionIcon({ type }: { type: SectionType }) {
-  const section = SECTION_TYPES.find((s) => s.value === type);
-  const Icon = section?.icon || List;
-  return <Icon className="h-4 w-4" />;
-}
-
-
-
-interface SelectedContent {
-  id: string;
-  title: string;
-  content_type: string;
-  thumbnail_url?: string;
-}
 
 export default function HomeSections() {
-  const { sections, createSection, updateSection, reorderSections } =
-    useHomeSections();
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL|| "http://81.17.100.176/api"
+  const API_BASE_URL =
+    import.meta.env.VITE_BACKEND_URL || "https://gutargooplus.com/api/api";
 
-// Create axios instance
- const api = axios.create({
-  baseURL: API_BASE_URL,
-  // withCredentials: true,
-  // headers: {
-  //   'Content-Type': 'application/json',
-  // },
-});
-
-// ✅ Add request interceptor
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-const getSection = "/admin/sections"
-const reorder = "/admin/sections/reorder"
- const getSectionAPI = async()=> await api.get(getSection) 
-
-
- const addSectionAPI = async (data)=> await api.post(getSection,data)
-
- const deleteSectionAPI = async (id) => await api.delete(getSection+"/"+id)
-
-
- const editSectionAPI = async (id,body) => await api.put(getSection+"/"+id,body)
-
- const dragAndDropAPI = async(body) => await api.put(reorder,body)
-const getMoviesSelect = "/movies"
-const getCategories = "/category"
- const getMoviesSelectAPI = async (params)=> await api.get(getMoviesSelect,{params})
-
- const getCategoriesAPI = async ()=>await api.get(getCategories)
-
-  const { categories } = useCategories();
-  const { movies } = useMoviesDB();
-  const { webSeries } = useWebSeriesDB();
-  const { tvShows } = useTVShowsDB();
-  const { shortMovies } = useShortMoviesDB();
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState<HomeSection | null>(
-    null,
-  );
-  const [selectedContent, setSelectedContent] = useState<SelectedContent[]>([]);
-  const [contentSearchType, setContentSearchType] = useState<string>("movies");
-
-  //
-//   const DraggableRow = (props) => {
-//   const { attributes, listeners, setNodeRef, transform, transition } =
-//     useSortable({ id: props["data-row-key"] });
-
-//   const style = {
-//     ...props.style,
-//     transform: CSS.Transform.toString(transform),
-//     transition,
-//     cursor: "move",
-//   };
-
-//   return <tr ref={setNodeRef} style={style} {...attributes} {...listeners} {...props} />;
-// };
-
-
-const DraggableRow = (props) => {
-  const { setNodeRef, transform, transition } = useSortable({
-    id: props["data-row-key"],
+  // Create axios instance
+  const api = axios.create({
+    baseURL: API_BASE_URL,
+    // withCredentials: true,
+    // headers: {
+    //   'Content-Type': 'application/json',
+    // },
   });
 
-  const style = {
-    ...props.style,
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  // ✅ Add request interceptor
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem("token");
 
-  return <tr ref={setNodeRef} style={style} {...props} />;
-};
-const DragHandle = ({ id }) => {
-  const { attributes, listeners } = useSortable({ id });
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
 
-  return (
-    <span {...attributes} {...listeners}>
-      <GripVerticalIcon className="cursor-grab text-gray-400" />
-    </span>
-  );
-}; 
-
-  const {
-    items: sectionItems,
-    addItem,
-    removeItem,
-  } = useSectionItems(editingSection?.id || null);
-
-  const [formData, setFormData] = useState<SectionFormData>({
-    title: "",
-    section_type: "trending_now",
-    content_type: "all",
-    content_source: "auto",
-    category_id: undefined,
-    display_style: "horizontal_banner",
-    item_limit: 20,
-    is_active: true,
-    display_order: 0,
-    visible_tabs: ["home"],
-    trending_period_days: 7,
-    is_original_only: false,
-  });
-
-  // Load existing section items when editing
-  useEffect(() => {
-    if (editingSection && sectionItems.length > 0) {
-      const loadedContent: SelectedContent[] = sectionItems.map((item) => {
-        let content: any = null;
-        switch (item.content_type) {
-          case "movies":
-            content = movies.find((m) => m.id === item.content_id);
-            break;
-          case "web_series":
-            content = webSeries.find((w) => w.id === item.content_id);
-            break;
-          case "tv_shows":
-            content = tvShows.find((t) => t.id === item.content_id);
-            break;
-          case "short_movies":
-            content = shortMovies.find((s) => s.id === item.content_id);
-            break;
-        }
-        return {
-          id: item.content_id,
-          title: content?.title || "Unknown",
-          content_type: item.content_type,
-          thumbnail_url: content?.thumbnail_url,
-        };
-      });
-      setSelectedContent(loadedContent);
-    }
-  }, [editingSection, sectionItems, movies, webSeries, tvShows, shortMovies]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    },
   );
 
+  const getSection = "/admin/sections";
+  const reorder = "/admin/sections/reorder";
+  const getSectionAPI = async () => await api.get(getSection);
 
+  const addSectionAPI = async (data) => await api.post(getSection, data);
 
-  const openEditDialog = (section: HomeSection) => {
-    setEditingSection(section);
-    setSelectedContent([]);
-    setFormData({
-      title: section.title,
-      section_type: section.section_type,
-      content_type: section.content_type,
-      content_source: section.content_source,
-      category_id: section.category_id || undefined,
-      display_style: section.display_style,
-      item_limit: section.item_limit || 20,
-      is_active: section.is_active,
-      display_order: section.display_order,
-      visible_tabs: section.visible_tabs,
-      trending_period_days: section.trending_period_days || 7,
-      is_original_only: section.is_original_only || false,
+  const deleteSectionAPI = async (id) =>
+    await api.delete(getSection + "/" + id);
+
+  const editSectionAPI = async (id, body) =>
+    await api.put(getSection + "/" + id, body);
+
+  const dragAndDropAPI = async (body) => await api.put(reorder, body);
+  const getMoviesSelect = "/movies";
+  const getCategories = "/category";
+  const getMoviesSelectAPI = async (params) =>
+    await api.get(getMoviesSelect, { params });
+
+  const getCategoriesAPI = async () => await api.get(getCategories);
+
+  const DraggableRow = (props) => {
+    const { setNodeRef, transform, transition } = useSortable({
+      id: props["data-row-key"],
     });
-    setDialogOpen(true);
-  };
 
-  const handleSubmit = async () => {
-    if (!formData.title) return;
-
-    const payload = {
-      ...formData,
-      category_id: formData.category_id || null,
+    const style = {
+      ...props.style,
+      transform: CSS.Transform.toString(transform),
+      transition,
     };
 
-    let sectionId: string;
-
-    if (editingSection) {
-      await updateSection.mutateAsync({ id: editingSection.id, ...payload });
-      sectionId = editingSection.id;
-    } else {
-      const result = await createSection.mutateAsync(payload);
-      sectionId = result.id;
-    }
-
-    // Save selected content for admin_selected source
-    if (
-      formData.content_source === "admin_selected" &&
-      selectedContent.length > 0
-    ) {
-      // Remove existing items if editing
-      if (editingSection) {
-        for (const item of sectionItems) {
-          await removeItem.mutateAsync(item.id);
-        }
-      }
-      // Add new items
-      for (let i = 0; i < selectedContent.length; i++) {
-        await addItem.mutateAsync({
-          section_id: sectionId,
-          content_type: selectedContent[i].content_type,
-          content_id: selectedContent[i].id,
-          display_order: i,
-        });
-      }
-    }
-
-    setDialogOpen(false);
+    return <tr ref={setNodeRef} style={style} {...props} />;
   };
+  const DragHandle = ({ id }) => {
+    const { attributes, listeners } = useSortable({ id });
 
-  const toggleTab = (tab: AppTab) => {
-    setFormData((prev) => ({
-      ...prev,
-      visible_tabs: prev.visible_tabs.includes(tab)
-        ? prev.visible_tabs.filter((t) => t !== tab)
-        : [...prev.visible_tabs, tab],
-    }));
-  };
-
-  const getContentList = () => {
-    switch (contentSearchType) {
-      case "movies":
-        return movies.map((m) => ({ ...m, content_type: "movies" }));
-      case "web_series":
-        return webSeries.map((w) => ({ ...w, content_type: "web_series" }));
-      case "tv_shows":
-        return tvShows.map((t) => ({ ...t, content_type: "tv_shows" }));
-      case "short_movies":
-        return shortMovies.map((s) => ({ ...s, content_type: "short_movies" }));
-      default:
-        return [];
-    }
-  };
-
-  const addContentToSelection = (item: any) => {
-    if (!selectedContent.find((c) => c.id === item.id)) {
-      setSelectedContent([
-        ...selectedContent,
-        {
-          id: item.id,
-          title: item.title,
-          content_type: item.content_type,
-          thumbnail_url: item.thumbnail_url,
-        },
-      ]);
-    }
-  };
-
-  const removeContentFromSelection = (id: string) => {
-    setSelectedContent(selectedContent.filter((c) => c.id !== id));
+    return (
+      <span {...attributes} {...listeners}>
+        <GripVerticalIcon className="cursor-grab text-gray-400" />
+      </span>
+    );
   };
 
   //New section module start from here
@@ -480,99 +131,62 @@ const DragHandle = ({ id }) => {
   };
 
   const arrayMove = (array, from, to) => {
-  const newArr = [...array];
-  const startIndex = from < 0 ? newArr.length + from : from;
+    const newArr = [...array];
+    const startIndex = from < 0 ? newArr.length + from : from;
 
-  if (startIndex >= 0 && startIndex < newArr.length) {
-    const endIndex = to < 0 ? newArr.length + to : to;
-    const [item] = newArr.splice(from, 1);
-    newArr.splice(endIndex, 0, item);
-  }
+    if (startIndex >= 0 && startIndex < newArr.length) {
+      const endIndex = to < 0 ? newArr.length + to : to;
+      const [item] = newArr.splice(from, 1);
+      newArr.splice(endIndex, 0, item);
+    }
 
-  return newArr;
-};
+    return newArr;
+  };
 
-const [data, setData] = useState(sectionData);
+  const [data, setData] = useState(sectionData);
 
-useEffect(() => {
-  setData(sectionData);
-}, [sectionData]);
+  useEffect(() => {
+    setData(sectionData);
+  }, [sectionData]);
 
-// const handleDragEnd = (event) => {
-//   const { active, over } = event;
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
 
-//   if (active.id !== over?.id) {
-//     const oldIndex = data.findIndex((i) => i._id === active.id);
-//     const newIndex = data.findIndex((i) => i._id === over.id);
+    if (!over || active.id === over.id) return;
 
-//     setData(arrayMove(data, oldIndex, newIndex));
-//   }
-// };
+    const oldIndex = data.findIndex((i) => i._id === active.id);
+    const newIndex = data.findIndex((i) => i._id === over.id);
 
-// const handleDragEnd = async (event) => {
-//   const { active, over } = event;
+    const newData = arrayMove(data, oldIndex, newIndex);
+    setData(newData);
 
-//   if (!over || active.id === over.id) return;
+    try {
+      // 🔥 Only send affected range
+      const start = Math.min(oldIndex, newIndex);
+      const end = Math.max(oldIndex, newIndex);
 
-//   const oldIndex = data.findIndex((i) => i._id === active.id);
-//   const newIndex = data.findIndex((i) => i._id === over.id);
+      const payload = newData.slice(start, end + 1).map((item, index) => ({
+        _id: item._id,
+        displayOrder: start + index,
+      }));
+      const finalData = payload?.map((item) => item?._id);
+      await dragAndDropAPI({ ids: [...finalData] });
 
-//   const newData = arrayMove(data, oldIndex, newIndex);
-//   setData(newData);
-
-//   // 🔥 Send updated order to backend
-//   try {
-//     const payload = newData.map((item, index) => ({
-//       _id: item._id,
-//       displayOrder: index, // or position
-//     }));
-
-//     await dragAndDropAPI(payload); // create this API
-//     message.success("Order updated");
-    
-//   } catch (error) {
-//     message.error("Failed to update order");
-//     console.log(error);
-//   }
-// };
-const handleDragEnd = async (event) => {
-  const { active, over } = event;
-
-  if (!over || active.id === over.id) return;
-
-  const oldIndex = data.findIndex((i) => i._id === active.id);
-  const newIndex = data.findIndex((i) => i._id === over.id);
-
-  const newData = arrayMove(data, oldIndex, newIndex);
-  setData(newData);
-
-  try {
-    // 🔥 Only send affected range
-    const start = Math.min(oldIndex, newIndex);
-    const end = Math.max(oldIndex, newIndex);
-
-    const payload = newData.slice(start, end + 1).map((item, index) => ({
-      _id: item._id,
-      displayOrder: start + index,
-    }));
-const finalData = payload?.map((item)=>item?._id)
-    await dragAndDropAPI({ids:[...finalData]});
-
-    message.success("Order updated");
-  } catch (error) {
-    message.error("Failed to update order");
-    console.log(error);
-  }
-};
+      message.success("Order updated");
+    } catch (error) {
+      message.error("Failed to update order");
+      console.log(error);
+    }
+  };
   const SectionTable = () => {
     const columns = [
-     {
-  title: "",
-  key: "sort",
-  width: 50,
-  align: "center",
-  render: (_, record) => <DragHandle id={record._id} />,
-},
+      {
+        title: "",
+        key: "sort",
+        width: 50,
+        align: "center",
+        render: (_, record) => <DragHandle id={record._id} />,
+      },
       {
         title: "Title",
         key: "title",
@@ -582,7 +196,6 @@ const finalData = payload?.map((item)=>item?._id)
         ),
       },
 
-     
       {
         title: "Content Source",
         dataIndex: "contentSource",
@@ -643,10 +256,14 @@ const finalData = payload?.map((item)=>item?._id)
         width: 100,
         render: (_, item) => (
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" onClick={(e) => {
-  e.stopPropagation();
-  onEdit(item);
-}}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(item);
+              }}
+            >
               <Pencil className="h-4 w-4" />
             </Button>
 
@@ -675,24 +292,24 @@ const finalData = payload?.map((item)=>item?._id)
       //   loading={isLoading}
       // />
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-  <SortableContext
-    items={data.map((i) => i._id)}
-    strategy={verticalListSortingStrategy}
-  >
-    <Table
-      rowKey="_id"
-      columns={columns}
-      dataSource={data}
-      pagination={false}
-        scroll={{x:'max-content'}}
-      components={{
-        body: {
-          row: DraggableRow,
-        },
-      }}
-    />
-  </SortableContext>
-</DndContext>
+        <SortableContext
+          items={data.map((i) => i._id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <Table
+            rowKey="_id"
+            columns={columns}
+            dataSource={data}
+            pagination={false}
+            scroll={{ x: "max-content" }}
+            components={{
+              body: {
+                row: DraggableRow,
+              },
+            }}
+          />
+        </SortableContext>
+      </DndContext>
     );
   };
 
@@ -753,16 +370,16 @@ const finalData = payload?.map((item)=>item?._id)
     }
     try {
       setSectionLoading(true);
-       const finaldata = {
-      ...form,
-      sectionData: {
-        movies: form?.movies || [], // ✅ safe fallback
-      },
-    };
+      const finaldata = {
+        ...form,
+        sectionData: {
+          movies: form?.movies || [], // ✅ safe fallback
+        },
+      };
 
       if ("movies" in finaldata) {
-      delete finaldata.movies;
-    }
+        delete finaldata.movies;
+      }
       const res = editData
         ? await editSectionAPI(deleteId, finaldata)
         : await addSectionAPI(finaldata);
@@ -905,8 +522,10 @@ const finalData = payload?.map((item)=>item?._id)
               <div>
                 <label className="block text-sm font-medium mb-1">Movies</label>
                 <Select
-                maxTagCount={2}
-    maxTagPlaceholder={(omittedValues) => `+ ${omittedValues.length} more`}
+                  maxTagCount={1}
+                  maxTagPlaceholder={(omittedValues) =>
+                    `+ ${omittedValues.length} more`
+                  }
                   mode="multiple"
                   showSearch={true}
                   // placeholder="Select Movies"
@@ -972,8 +591,6 @@ const finalData = payload?.map((item)=>item?._id)
                 onChange={(value) => handleChange("trendingPeriodDays", value)}
               />
             </div>
-
-           
 
             {/* Switches */}
             <div className="flex gap-6 col-span-2">

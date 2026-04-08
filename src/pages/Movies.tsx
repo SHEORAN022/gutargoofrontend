@@ -11,7 +11,6 @@ import CommonDeleteModal from "../components/AntdComponents/Modal";
 import { getAllCastAndCrewAPI } from "../api/castCrew.js";
 const API = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
-  // baseURL: "http://81.17.100.176/api",
   timeout: 300000,
 });
 
